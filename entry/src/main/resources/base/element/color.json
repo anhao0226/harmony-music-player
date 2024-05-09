@@ -1,0 +1,16 @@
+{
+  "color": [
+    {
+      "name": "start_window_background",
+      "value": "#FFFFFF"
+    },
+    {
+      "name": "default_background_color",
+      "value": "#B6C5D1"
+    },
+    {
+      "name": "song_item_tag_color",
+      "value": "#E84026"
+    }
+  ]
+}

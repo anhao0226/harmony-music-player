@@ -1,0 +1,41 @@
+{
+  "app": {
+    "signingConfigs": [
+      {
+        "name": "default",
+        "type": "HarmonyOS",
+        "material": {
+          "certpath": "C:\\Users\\anhao\\.ohos\\config\\auto_debug_netease_cloud_music_com.example.netease_cloud_music_260086000242992023.cer",
+          "storePassword": "0000001BC584EF333DC6BC7A67C03FB5FE5313EF14F1C37B1BF45636A2728040CF92624D9FC3A5405B955F",
+          "keyAlias": "debugKey",
+          "keyPassword": "0000001B4D94C3CDD33D54193D02BE20213941DE282A2A4D4D2B20F674EF22ED409E4056B0B286C5731570",
+          "profile": "C:\\Users\\anhao\\.ohos\\config\\auto_debug_netease_cloud_music_com.example.netease_cloud_music_260086000242992023.p7b",
+          "signAlg": "SHA256withECDSA",
+          "storeFile": "C:\\Users\\anhao\\.ohos\\config\\auto_debug_netease_cloud_music_com.example.netease_cloud_music_260086000242992023.p12"
+        }
+      }
+    ],
+    "compileSdkVersion": 9,
+    "compatibleSdkVersion": 9,
+    "products": [
+      {
+        "name": "default",
+        "signingConfig": "default",
+      }
+    ]
+  },
+  "modules": [
+    {
+      "name": "entry",
+      "srcPath": "./entry",
+      "targets": [
+        {
+          "name": "default",
+          "applyToProducts": [
+            "default"
+          ]
+        }
+      ]
+    }
+  ]
+}
