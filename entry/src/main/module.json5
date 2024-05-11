@@ -34,8 +34,16 @@
             ]
           }
         ]
-      }
-    ],
+      },
+    {
+        "name": "MyCustomDialog",
+        "srcEntry": "./ets/mycustomdialog/MyCustomDialog.ts",
+        "description": "$string:MyCustomDialog_desc",
+        "icon": "$media:icon",
+        "label": "$string:MyCustomDialog_label",
+        "startWindowIcon" : "$media:icon",
+        "startWindowBackground" : "$color:start_window_background"
+      }],
     "requestPermissions": [
       {
         "name": "ohos.permission.INTERNET",

@@ -14,6 +14,7 @@ import emitter from '@ohos.events.emitter';
 import { SongListCustomDialog } from '../components/SongListCustomDialog';
 import { EventId, SongPlayMode } from '../common/utils/AudioConfig';
 import { PlayerProgressBar } from '../components/PlayerProgressBar';
+import { SongInfoDialogContent } from '../components/SongInfoIDialogContent';
 
 
 @Entry
@@ -30,15 +31,21 @@ struct SongPlayerPage {
   @State playModeIconResource: Resource = $r('app.media.ic_public_order_play');
   //
   @StorageProp('IS_PLAYING') isPlay: boolean = false;
-  //
-  private dialogController: CustomDialogController = new CustomDialogController({
+  @StorageProp('CURR_AUDIO_ID') @Watch('onCurrAudioChange') currAudioId: number = 0;
+  // //
+  dialogController: CustomDialogController = new CustomDialogController({
     alignment: DialogAlignment.Bottom,
     builder: SongListCustomDialog({
       songs: AudioService.getInstance().playlist(),
-      onItemClick: (item, index) => {
+      onItemClick: (_, index) => {
         AudioService.getInstance().start(index);
       }
     }),
+  })
+
+  songInfoDialogController: CustomDialogController = new CustomDialogController({
+    alignment: DialogAlignment.Center,
+    builder: SongInfoDialogContent({ data: AudioService.getInstance().getCurrSong() })
   })
 
   onPageShow() {
@@ -46,6 +53,7 @@ struct SongPlayerPage {
     emitter.on({ eventId: EventId.CHANGE_SONG }, async (data: emitter.EventData) => {
       this.initData(JSON.parse(data.data['song']));
     })
+
   }
 
   onPageHide() {
@@ -69,6 +77,10 @@ struct SongPlayerPage {
     return value < 10 ? `0${parseInt(value.toString())}` : `${parseInt(value.toString())}`;
   }
 
+  onCurrAudioChange() {
+
+  }
+
   @Builder NavTitle() {
     Row() {
       Column({ space: 6 }) {
@@ -76,9 +88,11 @@ struct SongPlayerPage {
           .fontSize(24)
           .fontWeight(FontWeight.Bold)
           .fontColor(this.defaultColor);
-        if (this.songItem.id > 0) {
-          Text(formatArtists(this.songItem.ar)).fontColor(this.defaultColor)
-        }
+
+          Text(formatArtists(this.songItem.ar)).fontColor(this.defaultColor).onClick(() => {
+            this.songInfoDialogController.open();
+          })
+
 
       }.alignSelf(ItemAlign.End)
     }

@@ -3,6 +3,8 @@
     "pages/Index",
     "pages/PlaylistDetailPage",
     "pages/SongPlayerPage",
-    "pages/setting"
+    "pages/setting",
+    "pages/ArtistDetailPage",
+    "pages/AlbumDetailPage"
   ]
 }

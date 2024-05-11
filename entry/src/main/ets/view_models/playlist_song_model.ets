@@ -31,6 +31,8 @@ export class SongModel {
   ar: ArtistModel[];
   dt: number;
 
+  constructor() {}
+
   formJson(json: any): SongModel {
     this.id = json['id'];
     this.name = json['name'];

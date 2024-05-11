@@ -1,6 +1,6 @@
 import media from '@ohos.multimedia.media';
 import emitter from '@ohos.events.emitter';
-import { SongModel, getSongUrl } from '../../view_models/playlist_song_model';
+import { SongModel, getSongUrl, defaultSongItem } from '../../view_models/playlist_song_model';
 import { StorageService } from './StorageService';
 import { AvPlayState, SongPlayMode, EventId } from './AudioConfig'
 
@@ -8,6 +8,7 @@ import { AvPlayState, SongPlayMode, EventId } from './AudioConfig'
 export class AudioService {
   private playIndex: number = 0;
   private playList: SongModel[] = [];
+  private currAudioId: number = 0;
   private isPrepare: boolean = false;
   private avPlayer: media.AVPlayer | null = null;
   private avPlayerState: AvPlayState = AvPlayState.IDLE;
@@ -96,13 +97,10 @@ export class AudioService {
         //
         AppStorage.SetOrCreate<number>('SONG_TIME', song.dt);
         AppStorage.SetOrCreate<boolean>('IS_PLAYING', false);
-        AppStorage.SetOrCreate('SONG_ITEM', song);
-        // StorageService.getInstance().put('SONG_TIME', JSON.stringify(song));
+        AppStorage.SetOrCreate<number>('CURR_AUDIO_ID', song.id);
         //
         getSongUrl(song.id).then((value) => {
-          console.log(`Song url : ${JSON.stringify(value)}`);
           this.avPlayer.url = value.url;
-          // AppStorage.SetOrCreate<number>('')
         }).catch((err) => {
           console.log(`ERROR ${err}`);
         })
@@ -111,7 +109,9 @@ export class AudioService {
   }
 
   public getCurrSong(): SongModel {
-    return this.playList[this.playIndex];
+    const length = this.playList.length;
+    if (!length || this.playIndex > length - 1) return defaultSongItem;
+    else return this.playList[this.playIndex];
   }
 
 
@@ -201,7 +201,21 @@ export class AudioService {
           break;
         case 'completed':
           this.avPlayerState = AvPlayState.COMPLETED;
-          this.avPlayer.stop();
+          switch (this.playMode) {
+            case SongPlayMode.ORDER:
+              if (this.playIndex < this.playList.length - 1) {
+                this.start(this.playIndex + 1);
+              } else this.avPlayer.stop();
+              break;
+            case SongPlayMode.RANDOM:
+              break;
+            case SongPlayMode.SINGLE_CYCLE:
+              this.avPlayer.play();
+              break;
+            case SongPlayMode.LIST_CYCLE:
+              this.playNext();
+              break;
+          }
           console.info('AVPlayer state completed called.');
           break;
         case 'stopped':
