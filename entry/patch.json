@@ -1,7 +1,7 @@
 {
   "app": {
     "bundleName": "com.example.netease_cloud_music",
-    "patchVersionCode": 2000506,
+    "patchVersionCode": 2000524,
     "versionCode": 1000000
   },
   "module": {

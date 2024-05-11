@@ -9,18 +9,6 @@ export enum SongPlayMode {
   LIST_CYCLE
 }
 
-/*
-  idle,
-  initialized,
-  'prepared',
-  'playing',
-  'paused',
-  'completed',
-  'stopped',
-  'released',
-  'error'
- */
-
 export enum AvPlayState {
   IDLE,
   INITIALIZED,

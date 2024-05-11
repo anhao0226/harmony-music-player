@@ -13,28 +13,26 @@ import { AudioService } from '../common/utils/AudioService';
 import { AudioPlayController } from '../components/AudioPlayController';
 import { SongDataSource } from '../view_models/SongDataSource';
 import { getImageMainColor, getNetworkImagePixelMap, rgbaToHexColor } from '../common/utils/ColorUtil';
+import { SongItemComponent } from '../components/SongItem';
+import effectKit from '@ohos.effectKit';
+import image from '@ohos.multimedia.image';
+import { SongInfoDialogContent } from '../components/SongInfoIDialogContent';
 
-
-@Extend(Text) function songTagStyle(color: ResourceColor) {
-  .border({ width: 1.4 })
-  .borderRadius(3)
-  .fontWeight(FontWeight.Bold)
-  .borderColor(color)
-  .fontColor(color)
-  .fontSize(10)
-  .padding({ left: 2, right: 2, top: 0.4, bottom: 0.4 })
-}
 
 @Entry
 @Component
 struct PlaylistDetailPage {
-  @State currPlayingState: media.AVPlayerState = 'idle';
   @State pageOffset: number = 0;
-  @State playlistDetails: PlaylistModel = new PlaylistModel();
   @State playingSong: SongModel = defaultSongItem;
   @State songs: SongDataSource = new SongDataSource();
+  @State playlistDetails: PlaylistModel = new PlaylistModel();
   @State leftBgColor: string = '#B6C5D1';
   @State trackCount: number = 0;
+  @State dialogData: SongModel | null = null;
+  songInfoDialogController: CustomDialogController = new CustomDialogController({
+    alignment: DialogAlignment.Center,
+    builder: SongInfoDialogContent({ data: this.dialogData })
+  })
 
   onPageShow() {
     // AudioService.getInstance();
@@ -43,59 +41,25 @@ struct PlaylistDetailPage {
   }
 
   async initData(playlistId: number) {
-    this.getMoreSongs(playlistId);
-    try {
-      this.playlistDetails = await getPlaylistDetails(playlistId);
-      const pixelMap = await getNetworkImagePixelMap(this.playlistDetails.coverImgUrl)
+    this.playlistDetails = await getPlaylistDetails(playlistId);
+    getNetworkImagePixelMap(this.playlistDetails.coverImgUrl).then(async (pixelMap: image.PixelMap) => {
       const mainColor = await getImageMainColor(pixelMap);
       this.leftBgColor = rgbaToHexColor(mainColor);
-    } catch (err) {
-      console.log(`ERROR ${err}`);
-    }
-  }
+    }).catch((err) => {
+    })
 
-  @Builder SongTagUI(fee: number) {
-    if (fee === 0) {
-      // Text('free').songTagStyle('#A6C2BE');
-    } else if (fee === 1) {
-      Text('VIP').songTagStyle($r('app.color.song_item_tag_color'));
-    } else {
-      // Text('other').songTagStyle('#F5DC62');
-    }
-  }
-
-  @Builder SongItemUI(value: SongModel) {
-    Row({ space: 10 }) {
-      Column({ space: 4 }) {
-        Text(value.name)
-          .fontSize(20)
-          .maxLines(1)
-          .textOverflow({ overflow: TextOverflow.Ellipsis })
-          .fontColor('E5000000');
-        //
-        Row({ space: 4 }) {
-          this.SongTagUI(value.fee);
-          Text(formatArtists(value.ar))
-            .fontSize(15)
-            .fontColor('#66000000')
-            .maxLines(1)
-            .textOverflow({ overflow: TextOverflow.Ellipsis });
-        };
-      }.alignItems(HorizontalAlign.Start).layoutWeight(1);
-
-
-      Image($r('app.media.ic_public_more_list')).width(30).fillColor('#66000000')
-
-    }.padding(14);
   }
 
   build() {
-
     Column() {
       Row() {
         // Left
         Stack() {
-          Column().backgroundColor(this.leftBgColor).width('100%').height('100%').animation({ curve: Curve.Linear });
+          Column()
+            .backgroundColor(this.leftBgColor)
+            .width('100%')
+            .height('100%')
+            .animation({ curve: Curve.Linear });
           Column() {
             Row() {
               Image($r('app.media.ic_public_back')).onClick(() => {
@@ -163,7 +127,10 @@ struct PlaylistDetailPage {
             List() {
               LazyForEach(this.songs, (item: SongModel, index: number) => {
                 ListItem() {
-                  this.SongItemUI(item);
+                  SongItemComponent({ data: item, onMoreButtonClick: (value) => {
+                    this.dialogData = value;
+                    this.songInfoDialogController.open();
+                  } });
                 }.onClick(() => this.handleListItemClick(item, index)).width('100%').align(Alignment.Start);
 
               }, (item: SongModel, index: number) => (item.id + index).toString());
@@ -181,7 +148,10 @@ struct PlaylistDetailPage {
             .height(0)
             .layoutWeight(1)
             .divider({ strokeWidth: 1, startMargin: 12, color: '#ffe9f0f0' })
-            .onReachEnd(() => this.getMoreSongs(this.playlistDetails.id));
+            .onReachEnd(() => {
+              const params = router.getParams();
+              this.getMoreSongs(params['playlistId']);
+            });
 
           }
           .padding({ left: 12, right: 12 })
@@ -193,8 +163,8 @@ struct PlaylistDetailPage {
 
 
       }.width('100%').layoutWeight(1);
-
       AudioPlayController().height(60);
+
     }.height('100%').width('100%');
   }
 

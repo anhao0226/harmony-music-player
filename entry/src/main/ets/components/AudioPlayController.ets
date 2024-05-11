@@ -7,19 +7,28 @@ import { ArtistModel, defaultSongItem, formatArtists, SongModel } from '../view_
 @Component
 export struct AudioPlayController {
   @StorageProp('IS_PLAYING') isPlaying: boolean = false;
-  @StorageLink('SONG_ITEM') songItem: SongModel = defaultSongItem;
+  @StorageProp('CURR_AUDIO_ID') @Watch('onCurrAudioChange') currAudioId: number = 0;
+  @State currSongItem: SongModel = defaultSongItem;
+
+  aboutToAppear(){
+    this.currSongItem = AudioService.getInstance().getCurrSong();
+  }
+
+  onCurrAudioChange() {
+    this.currSongItem = AudioService.getInstance().getCurrSong();
+  }
 
   build() {
     Row() {
       Row({ space: 12 }) {
-        Image(this.songItem.id > 0 ? this.songItem.al.picUrl : $r('app.media.ic_public_music_filled'))
+        Image(this.currSongItem.id > 0 ? this.currSongItem.al.picUrl : $r('app.media.ic_public_music_filled'))
           .width(30)
           .height(30)
           .borderRadius(8);
 
         Column() {
-          Text(this.songItem.name);
-          Text(formatArtists(this.songItem.ar)).fontSize(14).fontColor(Color.Gray);
+          Text(this.currSongItem.name);
+          Text(formatArtists(this.currSongItem.ar)).fontSize(14).fontColor(Color.Gray);
         }.alignItems(HorizontalAlign.Start);
       }
 
