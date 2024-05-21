@@ -29,7 +29,7 @@ export struct TabItemComponent {
   }
 
   build() {
-    Column() {
+    Row() {
       if (!this.isLoading) {
         List() {
           LazyForEach(this.playlists, (item: PlaylistModel, index: number) => {
@@ -62,6 +62,6 @@ export struct TabItemComponent {
           Text('Loading').fontColor('#B6C5D1').margin({ left: 6 }).fontSize(18);
         }.width('100%');
       }
-    }
+    }.backgroundColor('#F1F3F5').height('100%').padding({ left: 20, right: 20});
   }
 }

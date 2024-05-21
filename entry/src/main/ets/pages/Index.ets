@@ -1,13 +1,16 @@
 import UIAbility from '@ohos.app.ability.UIAbility';
 import { AudioService } from '../common/utils/AudioService';
-import { AudioPlayController } from '../components/AudioPlayController';
+import { PlayControlComponent } from '../components/PlayControlComponent';
 import { TabItemComponent } from '../components/TabItemComponent';
 import { CategoryModel, getPlaylistCategory, } from '../view_models/playlist_song_model';
 import window from '@ohos.window';
+import router from '@ohos.router';
+import { CustomTabBar } from '../components/CustomTabBar';
 
 @Entry
 @Component
 struct Index {
+  private readonly TAG = 'INDEX';
   @State currentIndex: number = 0;
   @State isLoading: boolean = false;
   @State navBgColor: string = '#ffffff';
@@ -79,7 +82,7 @@ struct Index {
 
   @Builder NavigationTitle() {
     Column() {
-    }.width('100%').height('100%').alignItems(HorizontalAlign.Start);
+    }.width('100%').height('100%').alignItems(HorizontalAlign.Start).backgroundColor('#B6C5D1');
   }
 
   @Builder TabBuilder(title: string, targetIndex: number) {
@@ -102,46 +105,30 @@ struct Index {
   }
 
   @Builder Toolbar() {
-    Row().backgroundColor(Color.Blue).height('100%').width('100%')
+    Row().backgroundColor(Color.Blue).height(0).width('100%');
+  }
+
+  @Builder TabBarItemBuilder(item: CategoryModel, index: number) {
+    TabItemComponent({ category: item });
   }
 
   build() {
     Column() {
-      Navigation() {
-        Tabs({ controller: this.tabsController }) {
-          ForEach(this.categories, (item: CategoryModel, index: number) => {
-            TabContent() {
-              if (this.currentIndex === index || this.tabItemLoadStateArr[index]) {
-                TabItemComponent({ category: item });
-              }
-            }
-            .padding({ left: 10, right: 10 })
-            .tabBar(this.TabBuilder(item.name, index))
-            .backgroundColor('#F1F3F5');
-
-          }, (item: CategoryModel) => item.id.toString());
-
-        }
-        .barWidth('100%')
-        .vertical(false)
-        .animationDuration(400)
-        .barMode(BarMode.Scrollable)
-        .onChange(async (index) => {
-          this.currentIndex = index;
-          this.tabItemLoadStateArr[this.currentIndex] = true;
-        });
-
+      Stack({ alignContent: Alignment.TopStart }){
+        Row().height(124).width('100%').backgroundColor('#B6C5D1');
+        CustomTabBar({
+          items: $categories,
+          viewBuilder: this.TabBarItemBuilder.bind(this),
+          fontSize: 20,
+          barHeight: 56,
+          bgColor: '#B6C5D1',
+          unselectedColor: '#99FFFFFF',
+          selectedColor: '#FFFFFF',
+          underlineColor: '#FFFFFF',
+        }).margin({ top: 124 - 56 });
       }
-      .navBarWidth('100%')
-      .backgroundColor('#B6C5D1')
-      .title(this.NavigationTitle())
-      .titleMode(NavigationTitleMode.Mini)
-      .hideBackButton(true)
-      .hideToolBar(false)
-      .layoutWeight(1);
 
-
-      // AudioPlayController().height(60).width('100%');
+      PlayControlComponent().key(this.TAG);
     }
 
   }

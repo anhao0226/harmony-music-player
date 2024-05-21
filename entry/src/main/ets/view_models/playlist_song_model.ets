@@ -1,4 +1,6 @@
 import { httpRequestGet } from '../common/utils/HttpClient';
+import { TabBarItemInterface } from '../components/CustomTabBar';
+// import { TabBarItemInterface } from '../components/CustomTabBar';
 
 export class AlbumModel {
   id: number;
@@ -31,7 +33,8 @@ export class SongModel {
   ar: ArtistModel[];
   dt: number;
 
-  constructor() {}
+  constructor() {
+  }
 
   formJson(json: any): SongModel {
     this.id = json['id'];
@@ -82,7 +85,7 @@ export class PlaylistModel {
   }
 }
 
-export class CategoryModel {
+export class CategoryModel implements TabBarItemInterface {
   name: string;
   id: number;
   type: number;
@@ -104,6 +107,10 @@ export class CategoryModel {
     this.position = json['position'];
     this.category = json['category'];
     return this;
+  }
+
+  getText() {
+    return this.name;
   }
 }
 

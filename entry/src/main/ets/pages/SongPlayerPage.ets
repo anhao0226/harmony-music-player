@@ -17,7 +17,9 @@ import { PlayerProgressBar } from '../components/PlayerProgressBar';
 import { SongInfoDialogContent } from '../components/SongInfoIDialogContent';
 
 
-@Entry
+let localStorage = new LocalStorage({ 'PropA': 47 });
+
+@Entry(localStorage)
 @Component
 struct SongPlayerPage {
   @State bgColor: string = '#B6C5D1';
@@ -42,7 +44,6 @@ struct SongPlayerPage {
       }
     }),
   })
-
   songInfoDialogController: CustomDialogController = new CustomDialogController({
     alignment: DialogAlignment.Center,
     builder: SongInfoDialogContent({ data: AudioService.getInstance().getCurrSong() })
@@ -89,9 +90,9 @@ struct SongPlayerPage {
           .fontWeight(FontWeight.Bold)
           .fontColor(this.defaultColor);
 
-          Text(formatArtists(this.songItem.ar)).fontColor(this.defaultColor).onClick(() => {
-            this.songInfoDialogController.open();
-          })
+        Text(formatArtists(this.songItem.ar)).fontColor(this.defaultColor).onClick(() => {
+          this.songInfoDialogController.open();
+        })
 
 
       }.alignSelf(ItemAlign.End)

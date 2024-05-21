@@ -2,16 +2,18 @@ import router from '@ohos.router';
 
 import { SongModel, defaultSongItem, } from '../view_models/playlist_song_model';
 import { AudioService } from '../common/utils/AudioService';
-import { AudioPlayController } from '../components/AudioPlayController';
+import { PlayControlComponent } from '../components/PlayControlComponent';
 import { getImageMainColor, getNetworkImagePixelMap, rgbaToHexColor } from '../common/utils/ColorUtil';
 import { SongItemComponent } from '../components/SongItem';
 import { SongInfoDialogContent } from '../components/SongInfoIDialogContent';
 import { ArtistAlbumModel, ArtistDetailModel, fetchAlbumDetail, } from '../view_models/ArtistDetailModel';
+import { SplitLayout } from '../components/SplitLayout';
 
 
 @Entry
 @Component
 struct AlbumDetailPage {
+  private readonly TAG = 'ALBUM_DETAIL_PAGE'
   @State pageOffset: number = 0;
   @State playingSong: SongModel = defaultSongItem;
   @State leftBgColor: string = '#B6C5D1';
@@ -52,14 +54,44 @@ struct AlbumDetailPage {
   build() {
     Column() {
       Row() {
-        if (this.album) {
-          LeftComponent({ album: this.album, bgColor: this.leftBgColor });
+        // LEFT
+        SplitLayout({ pos: 'left', bgColor: this.leftBgColor }) {
+          if (this.album) {
+            Column({ space: 16 }) {
+              Image(this.album.picUrl)
+                .backgroundColor(Color.Gray)
+                .width('100%')
+                .aspectRatio(1)
+                .borderRadius(14)
+                .margin({ top: 12 })
+                .animation({ curve: Curve.EaseIn })
+                .clip(true);
+
+              Text(this.album.name).fontSize(22).fontColor('#FFFFFF');
+
+              Text(this.album.description).fontSize(15).fontColor('#99FFFFFF')
+                .textOverflow({ overflow: TextOverflow.Ellipsis })
+                .maxLines(4);
+
+            }.width('66%').alignItems(HorizontalAlign.Start);
+          }
         }
-        if (this.songs.length > 0) {
-          RightComponent({ album: this.album, songs: this.songs });
+        // RIGHT
+        SplitLayout({ pos: 'right', bgColor: this.leftBgColor }) {
+          if (this.songs.length > 0) {
+            Column() {
+              SongsComponent({ hotSongs: this.songs, album: this.album });
+            }
+            .padding({ left: 12, right: 12 })
+            .backgroundColor('#FFFFFF')
+            .borderRadius({ topLeft: 14, topRight: 14 })
+            .layoutWeight(1);
+          }
         }
       }.width('100%').layoutWeight(1);
-      AudioPlayController().height(60);
+
+      //
+      PlayControlComponent().key(this.TAG);
 
     }.height('100%').width('100%').backgroundColor('#F1F3F5');
   }
@@ -67,73 +99,6 @@ struct AlbumDetailPage {
   pageTransition() {
     PageTransitionEnter({ duration: 425, curve: Curve.EaseInOut, type: RouteType.Pop });
     PageTransitionExit({ duration: 425, curve: Curve.EaseInOut, type: RouteType.Push });
-  }
-}
-
-@Component
-struct LeftComponent {
-  private bgColor: string;
-  private album: ArtistAlbumModel;
-
-  build() {
-    Column() {
-      Row() {
-        Image($r('app.media.ic_public_back'))
-          .width(30)
-          .onClick(() => router.back())
-          .fillColor(Color.White)
-      }
-      .height(142)
-      .width('100%')
-      .alignItems(VerticalAlign.Center)
-      .justifyContent(FlexAlign.Start)
-      .padding({ left: 34, right: 34 });
-
-      Column({ space: 16 }) {
-        Image(this.album.picUrl)
-          .backgroundColor(Color.Gray)
-          .width('100%')
-          .aspectRatio(1)
-          .borderRadius(14)
-          .margin({ top: 12 })
-          .animation({ curve: Curve.EaseIn })
-          .clip(true);
-
-        Text(this.album.name).fontSize(22).fontColor('#FFFFFF');
-
-        Text(this.album.description).fontSize(15).fontColor('#99FFFFFF')
-          .textOverflow({ overflow: TextOverflow.Ellipsis })
-          .maxLines(4);
-
-      }.width('66%').alignItems(HorizontalAlign.Start)
-    }
-    .width('34%')
-    .height('100%')
-    .alignItems(HorizontalAlign.Center)
-    .backgroundBlurStyle(BlurStyle.Thin)
-    .justifyContent(FlexAlign.Start)
-    .backgroundColor(this.bgColor)
-    .animation({ curve: Curve.Linear });
-  }
-}
-
-@Component
-struct RightComponent {
-  private album: ArtistAlbumModel;
-  private songs: SongModel[] = [];
-
-  build() {
-    Column() {
-      Row().height(122).width('100%');
-      Column() {
-        SongsComponent({ hotSongs: this.songs, album: this.album });
-      }
-      .padding({ left: 12, right: 12 })
-      .backgroundColor('#FFFFFF')
-      .borderRadius({ topLeft: 14, topRight: 14 })
-      .layoutWeight(1);
-
-    }.height('100%').layoutWeight(1);
   }
 }
 

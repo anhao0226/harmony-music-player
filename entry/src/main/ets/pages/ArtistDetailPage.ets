@@ -2,7 +2,7 @@ import router from '@ohos.router';
 
 import { SongModel, defaultSongItem, } from '../view_models/playlist_song_model';
 import { AudioService } from '../common/utils/AudioService';
-import { AudioPlayController } from '../components/AudioPlayController';
+import { PlayControlComponent } from '../components/PlayControlComponent';
 import { SongDataSource } from '../view_models/SongDataSource';
 import { getImageMainColor, getNetworkImagePixelMap, rgbaToHexColor } from '../common/utils/ColorUtil';
 import { SongItemComponent } from '../components/SongItem';
@@ -15,82 +15,43 @@ import {
   fetchArtistMv,
   fetchArtistData
 } from '../view_models/ArtistDetailModel';
-
-@Component
-struct LeftComponent {
-  private bgColor: string;
-  private artist: ArtistDetailModel;
-
-  build() {
-    Column() {
-      Row() {
-        Image($r('app.media.ic_public_back'))
-          .width(30)
-          .onClick(() => router.back())
-          .fillColor(Color.White)
-      }
-      .height(142)
-      .width('100%')
-      .alignItems(VerticalAlign.Center)
-      .justifyContent(FlexAlign.Start)
-      .padding({ left: 34, right: 34 });
-
-      Column({ space: 16 }) {
-        Image(this.artist.picUrl)
-          .backgroundColor(Color.Gray)
-          .width('100%')
-          .aspectRatio(1)
-          .borderRadius(14)
-          .margin({ top: 12 })
-          .animation({ curve: Curve.EaseIn })
-          .clip(true);
-
-        Text(this.artist.name).fontSize(22).fontColor('#FFFFFF');
-
-        Text(this.artist.briefDesc).fontSize(15).fontColor('#99FFFFFF')
-          .textOverflow({ overflow: TextOverflow.Ellipsis })
-          .maxLines(4);
-
-      }.width('66%').alignItems(HorizontalAlign.Start)
-    }
-    .width('34%')
-    .height('100%')
-    .alignItems(HorizontalAlign.Center)
-    .backgroundBlurStyle(BlurStyle.Thin)
-    .justifyContent(FlexAlign.Start)
-    .backgroundColor(this.bgColor)
-    .animation({ curve: Curve.Linear });
-  }
-}
-
+import { SplitLayout } from '../components/SplitLayout';
+import { CustomTabBar, TabBarItemInterface } from '../components/CustomTabBar';
 
 @Entry
 @Component
 struct ArtistDetailPage {
+  private TAG = 'ARTIST_DETAIL_PAGE'
   @State pageOffset: number = 0;
   @State playingSong: SongModel = defaultSongItem;
   @State songs: SongDataSource = new SongDataSource();
   @State leftBgColor: string = '#B6C5D1';
   @State trackCount: number = 0;
-  @State dialogData: SongModel | null = null;
+  @State dialogData: SongModel | null = null
+  @State artist: ArtistDetailModel | null = null;
   songInfoDialogController: CustomDialogController = new CustomDialogController({
     alignment: DialogAlignment.Center,
     builder: SongInfoDialogContent({ data: this.dialogData })
   })
-  @State artistData: ArtistDetailModel | null = null;
+  @State tabBarItems: TabBarItemInterface[] = [
+    { getText: () => 'Songs' },
+    { getText: () => 'Videos' },
+    { getText: () => 'Albums' }
+  ];
 
   onPageShow() {
     const params = router.getParams();
-    const artistId = params['artistId'] as number;
-    this.initData(artistId);
+    // const artistId = params['artistId'] as number;
+    this.initData(7662);
   }
 
   initData(artistId: number) {
+    console.log(`artistId: ${artistId}`);
     fetchArtistData(artistId).then(async (data) => {
-      this.artistData = data.artist;
+      this.artist = data.artist;
       this.songs.pushDataFormArray(data.hotSongs);
       try {
-        const pixelMap = await getNetworkImagePixelMap(this.artistData.picUrl);
+        const pixelMap = await getNetworkImagePixelMap(this.artist.picUrl);
         const mainColor = await getImageMainColor(pixelMap);
         this.leftBgColor = rgbaToHexColor(mainColor);
       } catch (err) {
@@ -100,19 +61,53 @@ struct ArtistDetailPage {
 
   }
 
+  @Builder TabBarItem(item: TabBarItemInterface, index: number) {
+    if (index === 0) {
+      SongsComponent({ artist: this.artist, hotSongs: this.songs });
+    } else if (index === 1) {
+      MvsComponent({ artist: this.artist });
+    } else if (index === 2) {
+      AlbumsComponent({ artist: this.artist });
+    }
+  }
+
   build() {
     Column() {
       Row() {
-        // Left
-        if (this.artistData) {
-          LeftComponent({ artist: this.artistData, bgColor: this.leftBgColor });
+        SplitLayout({ pos: 'left', bgColor: this.leftBgColor }) {
+          if (this.artist) {
+            Column({ space: 16 }) {
+              Image(this.artist.picUrl)
+                .backgroundColor(Color.Gray)
+                .width('100%')
+                .aspectRatio(1)
+                .borderRadius(14)
+                .margin({ top: 12 })
+                .animation({ curve: Curve.EaseIn })
+                .clip(true);
+
+              Text(this.artist.name).fontSize(22).fontColor('#FFFFFF');
+
+              Text(this.artist.briefDesc).fontSize(15).fontColor('#99FFFFFF')
+                .textOverflow({ overflow: TextOverflow.Ellipsis })
+                .maxLines(4);
+
+            }.width('66%').alignItems(HorizontalAlign.Start)
+          }
         }
-        // Right
-        if (this.artistData) {
-          RightComponent({ artist: this.artistData, hotSongs: this.songs });
+
+        SplitLayout({ pos: 'right', bgColor: this.leftBgColor }) {
+          if (this.artist) {
+            CustomTabBar({
+              items: $tabBarItems,
+              viewBuilder: this.TabBarItem.bind(this)
+            })
+          }
         }
+
       }.width('100%').layoutWeight(1);
-      AudioPlayController().height(60);
+
+      PlayControlComponent().key(this.TAG);
 
     }.height('100%').width('100%').backgroundColor('#F1F3F5');
   }
@@ -120,43 +115,6 @@ struct ArtistDetailPage {
   pageTransition() {
     PageTransitionEnter({ duration: 425, curve: Curve.EaseInOut, type: RouteType.Pop });
     PageTransitionExit({ duration: 425, curve: Curve.EaseInOut, type: RouteType.Push });
-  }
-}
-
-@Component
-struct RightComponent {
-  private artist: ArtistDetailModel;
-  private hotSongs: SongDataSource = new SongDataSource();
-  private tabItems: string[] = ['Songs', 'Albums', 'Videos'];
-
-  build() {
-    Column() {
-      Row().height(122).width('100%');
-      Column() {
-
-        Tabs() {
-
-          TabContent() {
-            SongsComponent({ artist: this.artist, hotSongs: this.hotSongs });
-          }.tabBar('Songs')
-
-          TabContent() {
-            MvsComponent({ artist: this.artist });
-          }.tabBar('Videos')
-
-          TabContent() {
-            AlbumsComponent({ artist: this.artist });
-          }.tabBar('Albums')
-
-        }.barWidth('100%').barMode(BarMode.Scrollable).barHeight(66);
-
-      }
-      .padding({ left: 12, right: 12 })
-      .backgroundColor('#FFFFFF')
-      .borderRadius({ topLeft: 14, topRight: 14 })
-      .layoutWeight(1);
-
-    }.height('100%').layoutWeight(1);
   }
 }
 
