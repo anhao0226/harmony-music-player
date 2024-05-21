@@ -10,18 +10,21 @@ import {
   formatArtists,
 } from '../view_models/playlist_song_model';
 import { AudioService } from '../common/utils/AudioService';
-import { AudioPlayController } from '../components/AudioPlayController';
+import { PlayControlComponent } from '../components/PlayControlComponent';
 import { SongDataSource } from '../view_models/SongDataSource';
 import { getImageMainColor, getNetworkImagePixelMap, rgbaToHexColor } from '../common/utils/ColorUtil';
 import { SongItemComponent } from '../components/SongItem';
 import effectKit from '@ohos.effectKit';
 import image from '@ohos.multimedia.image';
 import { SongInfoDialogContent } from '../components/SongInfoIDialogContent';
+import { SplitLayout } from '../components/SplitLayout';
 
 
 @Entry
 @Component
 struct PlaylistDetailPage {
+  private TAG = 'PLAYLIST_DETAIL_PAGE';
+  private playlistId: string;
   @State pageOffset: number = 0;
   @State playingSong: SongModel = defaultSongItem;
   @State songs: SongDataSource = new SongDataSource();
@@ -30,13 +33,14 @@ struct PlaylistDetailPage {
   @State trackCount: number = 0;
   @State dialogData: SongModel | null = null;
   songInfoDialogController: CustomDialogController = new CustomDialogController({
+    gridCount: 5,
     alignment: DialogAlignment.Center,
     builder: SongInfoDialogContent({ data: this.dialogData })
   })
 
   onPageShow() {
-    // AudioService.getInstance();
     const params = router.getParams();
+    this.playlistId = params['playlistId'];
     this.initData(params['playlistId']);
   }
 
@@ -53,71 +57,47 @@ struct PlaylistDetailPage {
   build() {
     Column() {
       Row() {
-        // Left
-        Stack() {
-          Column()
-            .backgroundColor(this.leftBgColor)
-            .width('100%')
-            .height('100%')
-            .animation({ curve: Curve.Linear });
-          Column() {
-            Row() {
-              Image($r('app.media.ic_public_back')).onClick(() => {
-                router.back();
-              }).width(30).width(30).fillColor(Color.White)
-            }
-            .height(142)
-            .alignItems(VerticalAlign.Center)
-            .justifyContent(FlexAlign.Start)
-            .width('100%')
-            .padding({ left: 34, right: 34 });
+        SplitLayout({ pos: 'left', bgColor: this.leftBgColor }) {
 
-            Column({ space: 16 }) {
-              Image(this.playlistDetails.coverImgUrl)
-                .backgroundColor(Color.Gray)
-                .width('100%')
-                .aspectRatio(1)
-                .borderRadius(14)
-                .margin({ top: 12 })
-                .animation({ curve: Curve.EaseIn })
-                .clip(true);
-              Text(this.playlistDetails.name).fontSize(22).fontColor('#FFFFFF');
-              Text(this.playlistDetails.description).fontSize(15).fontColor('#99FFFFFF')
-                .textOverflow({ overflow: TextOverflow.Ellipsis })
-                .maxLines(4)
-            }.width('66%').alignItems(HorizontalAlign.Start)
+          Column({ space: 16 }) {
+            Image(this.playlistDetails.coverImgUrl)
+              .backgroundColor(Color.Gray)
+              .width('100%')
+              .aspectRatio(1)
+              .borderRadius(14)
+              .margin({ top: 12 })
+              .animation({ curve: Curve.EaseIn })
+              .clip(true);
+            Text(this.playlistDetails.name).fontSize(22).fontColor('#FFFFFF');
+            Text(this.playlistDetails.description).fontSize(15).fontColor('#99FFFFFF')
+              .textOverflow({ overflow: TextOverflow.Ellipsis })
+              .maxLines(4)
+          }.width('66%').alignItems(HorizontalAlign.Start)
 
-            Row() {
-              Badge({
-                count: this.playlistDetails.playCount,
-                position: BadgePosition.RightTop,
-                style: { badgeSize: 16, badgeColor: '#E84026' }
-              }) {
-                Image($r('app.media.ic_public_play_norm'))
-                  .height('100%')
-                  .constraintSize({ maxHeight: 26 })
-                  .fillColor('#66000000');
-              };
-              Image($r('app.media.ic_public_comments'))
+          Row() {
+            Badge({
+              count: this.playlistDetails.playCount,
+              position: BadgePosition.RightTop,
+              style: { badgeSize: 16, badgeColor: '#E84026' }
+            }) {
+              Image($r('app.media.ic_public_play_norm'))
                 .height('100%')
-                .constraintSize({ maxHeight: 30 })
+                .constraintSize({ maxHeight: 26 })
                 .fillColor('#66000000');
-              Image($r('app.media.ic_public_share_filled'))
-                .height('100%')
-                .constraintSize({ maxHeight: 30 })
-                .fillColor('#66000000');
-            }.height(65).width('66%').justifyContent(FlexAlign.SpaceAround)
-            // .backgroundColor(Color.Red);
-          }
-          .height('100%')
-          .alignItems(HorizontalAlign.Center)
-          .backgroundBlurStyle(BlurStyle.Thin)
-          .justifyContent(FlexAlign.Start);
-        }.width('34%');
+            };
+            Image($r('app.media.ic_public_comments'))
+              .height('100%')
+              .constraintSize({ maxHeight: 30 })
+              .fillColor('#66000000');
+            Image($r('app.media.ic_public_share_filled'))
+              .height('100%')
+              .constraintSize({ maxHeight: 30 })
+              .fillColor('#66000000');
+          }.height(65).width('66%').justifyContent(FlexAlign.SpaceAround)
 
-        // Right
-        Column() {
-          Row().height(122).width('100%');
+        }
+
+        SplitLayout({ pos: 'right', bgColor: this.leftBgColor }) {
           Column() {
             Row({ space: 12 }) {
               Image($r('app.media.ic_public_play_norm')).width(28).width(28).fillColor('#E84026');
@@ -127,10 +107,12 @@ struct PlaylistDetailPage {
             List() {
               LazyForEach(this.songs, (item: SongModel, index: number) => {
                 ListItem() {
+
                   SongItemComponent({ data: item, onMoreButtonClick: (value) => {
                     this.dialogData = value;
                     this.songInfoDialogController.open();
                   } });
+
                 }.onClick(() => this.handleListItemClick(item, index)).width('100%').align(Alignment.Start);
 
               }, (item: SongModel, index: number) => (item.id + index).toString());
@@ -158,12 +140,12 @@ struct PlaylistDetailPage {
           .backgroundColor('#FFFFFF')
           .borderRadius({ topLeft: 14, topRight: 14 })
           .layoutWeight(1);
-
-        }.backgroundColor('#F1F3F5').height('100%').layoutWeight(1);
-
+        }
 
       }.width('100%').layoutWeight(1);
-      AudioPlayController().height(60);
+
+      PlayControlComponent().key(this.TAG);
+
 
     }.height('100%').width('100%');
   }

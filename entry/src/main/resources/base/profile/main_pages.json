@@ -5,6 +5,8 @@
     "pages/SongPlayerPage",
     "pages/setting",
     "pages/ArtistDetailPage",
-    "pages/AlbumDetailPage"
+    "pages/AlbumDetailPage",
+    "pages/CanvasExample",
+    "pages/CustomTabBar"
   ]
 }

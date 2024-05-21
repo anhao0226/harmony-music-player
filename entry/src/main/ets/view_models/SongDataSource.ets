@@ -22,8 +22,9 @@ export class SongDataSource implements IDataSource {
   }
 
   public pushDataFormArray(songs: SongModel[]) {
-    this.dataArray.push(...songs);
-    this.notifyDataAdd(this.dataArray.length - 1);
+    songs.forEach((item:SongModel) => {
+      this.pushData(item);
+    });
   }
 
   public addData(index: number, data: SongModel): void {

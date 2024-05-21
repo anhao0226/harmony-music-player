@@ -44,6 +44,7 @@ export struct SongItemComponent {
 
   build() {
     Row({ space: 10 }) {
+
       Column({ space: 4 }) {
         Text(this.data.name)
           .fontSize(20)
@@ -69,7 +70,7 @@ export struct SongItemComponent {
         .width(36)
         .padding({ left: 5, right: 5 })
         .fillColor('#66000000')
-        .backgroundColor(Color.Red)
+        // .backgroundColor(Color.Red)
         .onClick(() => {
           if (this.onMoreButtonClick) this.onMoreButtonClick(this.data);
         })
