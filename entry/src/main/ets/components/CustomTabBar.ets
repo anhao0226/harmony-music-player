@@ -28,11 +28,12 @@ export struct CustomTabBar {
   private fontSize: number = 18;
   // underline
   @State underlineColor: string = '#A6C2BE';
-  private underlineHeight: number = 3;
+  @State underlineHeight: number = 3;
   @State underlineXOffset: number = 0;
   @State underlineWidth: number = 0;
 
   aboutToAppear() {
+    console.log('CustomTabBar aboutToAppear');
     this.itemCount = this.items.length;
     this.itemAreaList = new Array(this.itemCount).fill(null);
   }
@@ -47,7 +48,7 @@ export struct CustomTabBar {
     }
   }
 
-  onItemAreaChange(oldVal: Area, newVal: Area, index: number) {
+  onItemAreaChange(_: Area, newVal: Area, index: number) {
     this.itemAreaList[index] = newVal;
     if (index === 0) {
       this.underlineWidth = newVal.width as number;
@@ -81,35 +82,54 @@ export struct CustomTabBar {
                   this.onItemAreaChange(oldVal, newVal, index);
                 });
               }, (_, index) => `${index}_TAB_ITEM`);
-            }.height(this.barHeight)
+            }.height(this.barHeight - this.underlineHeight)
             // underline
-            UnderlineCanvas({
-              lineHeight: 5,
-              lineWidth: this.underlineWidth,
-              lineColor: this.underlineColor,
+            UnderlineComponent({
+              _height: this.underlineHeight,
+              _width: this.underlineWidth,
+              _color: this.underlineColor,
             }).offset({ x: this.underlineXOffset })
 
           }
-          .height(this.barHeight + this.underlineHeight + 3)
+          .height(this.barHeight)
           .alignItems(HorizontalAlign.Start);
         }
         .scrollable(ScrollDirection.Horizontal)
         .scrollBar(BarState.Off);
-      }.width('100%').justifyContent(FlexAlign.Center).backgroundColor(this.bgColor);
+      }.width('100%').justifyContent(FlexAlign.Center);
 
       /**
        * _TabBarView
        */
       _TabBarView({
         items: $items,
-        currentIndex: this.currentIndex,
+        sharedIndex: this.currentIndex,
         viewBuilder: this.viewBuilder,
         onViewChange: (index: number) => {
           this.currentIndex = index;
           this.handleScrollTo();
         }
-      }).layoutWeight(1)
+      });
     }
+  }
+}
+
+@Component
+struct _TabViewWrapper {
+  @Prop @Watch('onIsRender') isRender: boolean;
+  @BuilderParam closer: () => void;
+
+  aboutToDisappear() {
+    console.log('aboutToDisappear');
+  }
+
+  onIsRender() {
+    console.log(`onIsRender ${this.isRender}`);
+  }
+
+  build() {
+    if (this.isRender) this.closer();
+    else Row();
   }
 }
 
@@ -118,61 +138,89 @@ export struct CustomTabBar {
  */
 @Component
 struct _TabBarView {
-  @Prop @Watch('onIndexChange') currentIndex: number;
+  @Link @Watch('handleItemsChange') items: any[];
+  @Prop @Watch('handleShareIndexChange') sharedIndex: number;
+  @State viewStateList: boolean[] = [];
   @BuilderParam viewBuilder: (item: TabBarItemInterface, index: number) => void;
-  @Link items: any[];
+  @State protected currentIndex: number = 0;
   private scroller: Scroller = new Scroller()
   private itemViewWidth: number = 0;
+  //
   private touchUpOffsetX: number = 0;
   private touchDownOffsetX: number = 0;
   private checkSwipeGesture: boolean = false;
-  private itemAnimation = { duration: 325, curve: Curve.EaseInOut }
+  //
   private onViewChange: (index: number) => void;
+  private scrollStopEvents: (() => void)[] = [];
+
+  aboutToAppear() {
+    console.log('_TabBarView aboutToAppear')
+  }
+
+  updateCurrentIndex(index: number) {
+    if (index === this.currentIndex) return;
+    // 渲染对应下标View
+    this.viewStateList[index] = true;
+    // 添加滑动结束执行的函数且销毁上一显示View
+    const _callback = (_index: number) => () => (this.viewStateList[_index] = false);
+    this.scrollStopEvents.push(_callback(this.currentIndex))
+    // 滑动到指定下标View
+    this.scrollToIndexView(index);
+    // 更新currentIndex
+    this.currentIndex = index;
+    if (this.onViewChange) this.onViewChange(index);
+  }
 
   handleTouchEvent(event: TouchEvent) {
+    console.log('handleTouchEvent');
     if (event.type === TouchType.Down) {
       this.touchDownOffsetX = event.touches[0].screenX;
     } else if (event.type === TouchType.Move) {
     } else if (event.type === TouchType.Up || event.type === TouchType.Cancel) {
       const { xOffset } = this.scroller.currentOffset();
-      const currentIndex = Math.floor((xOffset + (2 * this.itemViewWidth / 3)) / this.itemViewWidth);
-      const dx = currentIndex * this.itemViewWidth;
-      this.handleScrollTo(dx);
-      if (currentIndex === this.currentIndex) {
+      const minChangePageVal: number = 2 * this.itemViewWidth / 3;
+      const index: number = Math.floor((xOffset + minChangePageVal) / this.itemViewWidth);
+      if (index === this.currentIndex) {
+        this.scrollToIndexView(index);
         this.touchUpOffsetX = event.touches[0].screenX;
-        this.checkSwipeGesture = true
-      }
-      this.updateCurrentIndex(currentIndex);
+        this.checkSwipeGesture = true;
+      } else this.updateCurrentIndex(index);
     }
+  }
+
+  scrollToIndexView(index: number) {
+    const xOffset = index * this.itemViewWidth
+    this.scroller.scrollTo({
+      yOffset: 0,
+      xOffset: xOffset,
+      animation: { duration: 325, curve: Curve.EaseInOut }
+    });
   }
 
   handleSwipeGesture(event: GestureEvent) {
+    console.log('handleSwipeGesture');
     if (this.checkSwipeGesture) {
       const swipeX = this.touchUpOffsetX - this.touchDownOffsetX;
-      const currentIndex = swipeX < 0 ? (this.currentIndex + 1) : (this.currentIndex - 1);
-      const dx = currentIndex * this.itemViewWidth
-      this.handleScrollTo(dx);
-      this.updateCurrentIndex(currentIndex);
+      const index = swipeX < 0 ? (this.currentIndex + 1) : (this.currentIndex - 1);
+      if (index >= 0 && index !== this.currentIndex) {
+        this.updateCurrentIndex(index);
+      }
     }
     this.checkSwipeGesture = false;
-  }
-
-  handleScrollTo(xOffset: number) {
-    this.scroller.scrollTo({ yOffset: 0, xOffset: xOffset, animation: this.itemAnimation });
-  }
-
-  updateCurrentIndex(index: number) {
-    this.currentIndex = index;
-    if (this.onViewChange) this.onViewChange(index);
   }
 
   handleScrollAreaChange(oldVal: Area, newVal: Area) {
     this.itemViewWidth = newVal.width as number;
   }
 
-  onIndexChange() {
-    const dx = this.currentIndex * this.itemViewWidth
-    this.handleScrollTo(dx);
+  handleShareIndexChange() {
+    this.updateCurrentIndex(this.sharedIndex);
+  }
+
+  handleItemsChange() {
+    const itemCount = this.items.length;
+    this.viewStateList = new Array(itemCount).fill(false, 0, itemCount);
+    if (itemCount) this.viewStateList[this.currentIndex] = true;
   }
 
   build() {
@@ -180,28 +228,34 @@ struct _TabBarView {
       Row() {
         ForEach(this.items, (_, index) => {
           Column() {
-            if (this.currentIndex === index) {
+            if (this.viewStateList[index]) {
               this.viewBuilder(this.items[index], index);
             }
           }.width('100%').height('100%');
         }, (_, index) => `${index}_TAB_VIEW`);
-      }.layoutWeight(1);
+      }
     }
+    .layoutWeight(1)
     .scrollBar(BarState.Off)
     .onAreaChange((oldVal: Area, newVal: Area) => this.handleScrollAreaChange(oldVal, newVal))
     .edgeEffect(EdgeEffect.None)
     .scrollable(ScrollDirection.Horizontal)
     .onTouch((event: TouchEvent) => this.handleTouchEvent(event))
     .parallelGesture(SwipeGesture({ direction: SwipeDirection.Horizontal })
-      .onAction((event: GestureEvent) => this.handleSwipeGesture(event)));
+      .onAction((event: GestureEvent) => this.handleSwipeGesture(event)))
+    .onScrollStop(() => {
+      this.scrollStopEvents.forEach((callback) => callback())
+      console.log(JSON.stringify(this.viewStateList));
+      this.scrollStopEvents = [];
+    })
   }
 }
 
 @Component
-struct UnderlineCanvas {
-  @Prop lineColor: string;
-  @Prop @Watch('onLineWidthChange') lineWidth: number;
-  @Prop lineHeight: number;
+struct UnderlineComponent {
+  @Prop _color: string;
+  @Prop @Watch('onLineWidthChange') _width: number;
+  @Prop _height: number;
 
   //用来配置CanvasRenderingContext2D对象的参数，包括是否开启抗锯齿，true表明开启抗锯齿。
   private settings: RenderingContextSettings = new RenderingContextSettings(true)
@@ -215,17 +269,17 @@ struct UnderlineCanvas {
   drawLine() {
     this.context.beginPath()
     this.context.moveTo(0, 0)
-    this.context.lineTo(this.lineWidth, 0)
+    this.context.lineTo(this._width, 0)
     this.context.lineCap = 'round'
-    this.context.lineWidth = this.lineHeight;
-    this.context.strokeStyle = this.lineColor;
+    this.context.lineWidth = this._height;
+    this.context.strokeStyle = this._color;
     this.context.stroke()
   }
 
   build() {
     Canvas(this.context)
-      .width(this.lineWidth)
-      .height(this.lineHeight)
+      .width(this._width)
+      .height(this._height)
       .onReady(() => {
         this.drawLine();
       });

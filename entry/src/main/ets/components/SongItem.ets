@@ -1,6 +1,6 @@
 import { AudioService } from '../common/utils/AudioService';
 import { formatArtists, SongModel } from '../view_models/playlist_song_model';
-import { AnimationBar } from './AnimationBar';
+
 
 @Extend(Text) function songTagStyle(color: ResourceColor) {
   .border({ width: 1.4 })
@@ -16,6 +16,7 @@ import { AnimationBar } from './AnimationBar';
 export struct SongItemComponent {
   private data: SongModel;
   private onMoreButtonClick?: (value: SongModel) => void;
+  private index: number = 0;
   @StorageProp('IS_PLAYING') @Watch('onStateChange') isPlaying: boolean = false;
   @StorageProp('CURR_AUDIO_ID') @Watch('onCurrAudioIdChange') currAudioId: number = 0;
 
@@ -42,9 +43,23 @@ export struct SongItemComponent {
 
   }
 
+  @Builder IndexUI(index: number) {
+    if (this.currAudioId === this.data.id) {
+      Row() {
+        AnimationBar({ isPlaying: this.isPlaying ? true : false, itemCount: 4 })
+      }.width(40).justifyContent(FlexAlign.Center);
+    } else {
+      Text(new String(index + 1).padStart(2, '0'))
+        .width(40)
+        .fontSize(20)
+        .textAlign(TextAlign.Center)
+        .fontColor('#66000000');
+    }
+  }
+
   build() {
     Row({ space: 10 }) {
-
+      this.IndexUI(this.index);
       Column({ space: 4 }) {
         Text(this.data.name)
           .fontSize(20)
@@ -58,22 +73,74 @@ export struct SongItemComponent {
             .fontColor('#66000000')
             .maxLines(1)
             .textOverflow({ overflow: TextOverflow.Ellipsis });
-        };
+        }
       }.alignItems(HorizontalAlign.Start).layoutWeight(1);
 
       Blank();
-
-      AnimationBar({ isPlaying: this.isPlaying ? true : false, barCount: 6 })
-        .visibility(this.currAudioId === this.data.id ? Visibility.Visible : Visibility.Hidden);
 
       Image($r('app.media.ic_public_more_list'))
         .width(36)
         .padding({ left: 5, right: 5 })
         .fillColor('#66000000')
-        // .backgroundColor(Color.Red)
+          // .backgroundColor(Color.Red)
         .onClick(() => {
           if (this.onMoreButtonClick) this.onMoreButtonClick(this.data);
         })
     }.padding(12)
   }
 }
+
+
+@Component
+struct AnimationBar {
+  @Prop itemCount: number;
+  @Prop @Watch('onStateChange') isPlaying: boolean;
+  @State items: number[] = [];
+  private rowWidth = 0;
+  private itemWidth = 2;
+  private itemMinHeight = 3;
+  private itemMaxHeight = 24;
+  private space: number = 2;
+
+  aboutToAppear() {
+    this.items = new Array<number>(this.itemCount);
+    this.items.map(() => 0);
+    this.rowWidth = this.itemCount * this.itemWidth + (this.space * (this.itemCount - 1));
+    this.startAnimate();
+  }
+
+  onStateChange() {
+    this.startAnimate();
+  }
+
+  startAnimate() {
+    if (this.isPlaying) {
+      animateTo({
+        duration: 325,
+        curve: Curve.Ease,
+        onFinish: () => this.startAnimate(),
+      }, () => {
+        for (let index = 0; index < this.itemCount; index++) {
+          this.items[index] = Math.max(Math.round(Math.random() * this.itemMaxHeight), this.itemMinHeight);
+        }
+      })
+    }
+  }
+
+  @Builder Bar(index: number, itemW: number) {
+    Row()
+      .width(itemW)
+      .height(this.items[index])
+      .backgroundColor('#E67C92')
+      .borderRadius({ topLeft: this.itemWidth, topRight: this.itemWidth });
+  }
+
+  build() {
+    Row({ space: this.space }) {
+      ForEach(this.items, (_: number, index: number) => {
+        this.Bar(index, this.itemWidth);
+      }, (_: any, index: number) => `${index}_ITEM_BAR`);
+    }.width(this.rowWidth).height(this.itemMaxHeight).alignItems(VerticalAlign.Bottom);
+  }
+}
+

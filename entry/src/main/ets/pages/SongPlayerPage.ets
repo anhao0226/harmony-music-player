@@ -15,6 +15,8 @@ import { SongListCustomDialog } from '../components/SongListCustomDialog';
 import { EventId, SongPlayMode } from '../common/utils/AudioConfig';
 import { PlayerProgressBar } from '../components/PlayerProgressBar';
 import { SongInfoDialogContent } from '../components/SongInfoIDialogContent';
+import { LyricComponent } from '../components/LyricComponent';
+import { fetchSongLyric } from '../api/SongLyricApi';
 
 
 let localStorage = new LocalStorage({ 'PropA': 47 });
@@ -52,6 +54,8 @@ struct SongPlayerPage {
   onPageShow() {
     this.initData(AudioService.getInstance().getCurrSong());
     emitter.on({ eventId: EventId.CHANGE_SONG }, async (data: emitter.EventData) => {
+      const value = JSON.parse(data.data['song'])
+      fetchSongLyric(value.id);
       this.initData(JSON.parse(data.data['song']));
     })
 
@@ -117,17 +121,23 @@ struct SongPlayerPage {
       Column() {
 
         Row() {
-          if (this.songItem.id > 0) {
-            Image(this.songItem.al.picUrl)
-              .width(320)
-              .height(320)
-              .borderRadius(160)
-              .borderColor(this.sliderSelectedColor);
-          } else {
-            Image($r('app.media.ic_device_earphone_filled'))
-              .width(320)
-              .height(320);
-          }
+          Column(){
+            if (this.songItem.id > 0) {
+              Image(this.songItem.al.picUrl)
+                .width(320)
+                .height(320)
+                .borderRadius(160)
+                .borderColor(this.sliderSelectedColor);
+            } else {
+              Image($r('app.media.ic_device_earphone_filled'))
+                .width(320)
+                .height(320);
+            }
+          }.width('50%')
+          Column(){
+            LyricComponent();
+          }.layoutWeight(1);
+
         }.layoutWeight(1);
 
         Column({ space: 20 }) {

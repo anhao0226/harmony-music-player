@@ -41,7 +41,7 @@ struct PlaylistDetailPage {
   onPageShow() {
     const params = router.getParams();
     this.playlistId = params['playlistId'];
-    this.initData(params['playlistId']);
+    this.initData(params['playlistId'] as number);
   }
 
   async initData(playlistId: number) {
@@ -67,6 +67,7 @@ struct PlaylistDetailPage {
               .borderRadius(14)
               .margin({ top: 12 })
               .animation({ curve: Curve.EaseIn })
+              .shadow({ color: 'rgba(0, 0, 0, 0.12)', radius: 30, offsetX: 3, offsetY: 3 })
               .clip(true);
             Text(this.playlistDetails.name).fontSize(22).fontColor('#FFFFFF');
             Text(this.playlistDetails.description).fontSize(15).fontColor('#99FFFFFF')
@@ -88,7 +89,11 @@ struct PlaylistDetailPage {
             Image($r('app.media.ic_public_comments'))
               .height('100%')
               .constraintSize({ maxHeight: 30 })
-              .fillColor('#66000000');
+              .fillColor('#66000000')
+              .onClick(() => {
+                router.pushUrl({ url: 'pages/Comments', params: { playlistId: this.playlistDetails.id } })
+              });
+
             Image($r('app.media.ic_public_share_filled'))
               .height('100%')
               .constraintSize({ maxHeight: 30 })
@@ -102,39 +107,34 @@ struct PlaylistDetailPage {
             Row({ space: 12 }) {
               Image($r('app.media.ic_public_play_norm')).width(28).width(28).fillColor('#E84026');
               Text(`Play all (${this.playlistDetails.trackCount})`).fontSize(16).fontWeight(FontWeight.Bold);
-            }.height(66).width('100%').padding({ left: 10 });
+            }.height(66).width('100%').padding({ left: 14 });
 
             List() {
               LazyForEach(this.songs, (item: SongModel, index: number) => {
                 ListItem() {
-
-                  SongItemComponent({ data: item, onMoreButtonClick: (value) => {
+                  SongItemComponent({ index: index, data: item, onMoreButtonClick: (value) => {
                     this.dialogData = value;
                     this.songInfoDialogController.open();
                   } });
-
                 }.onClick(() => this.handleListItemClick(item, index)).width('100%').align(Alignment.Start);
-
-              }, (item: SongModel, index: number) => (item.id + index).toString());
-
+              }, (item: SongModel) => `${item.id}_SONG_ITEM`);
               ListItem() {
                 Row() {
                   LoadingProgress().height(30).width(30).color('#B6C5D1');
                   Text('Loading').fontColor('#B6C5D1').margin({ left: 6 });
                 }
-              }.width('100%').padding(24);
+              }.width('100%');
 
             }
             .lanes(2)
             .width('100%')
             .height(0)
             .layoutWeight(1)
-            .divider({ strokeWidth: 1, startMargin: 12, color: '#ffe9f0f0' })
+            .divider({ strokeWidth: 1, endMargin: 20, color: '#ffe9f0f0' })
             .onReachEnd(() => {
               const params = router.getParams();
-              this.getMoreSongs(params['playlistId']);
+              this.getMoreSongs(params['playlistId'] as number);
             });
-
           }
           .padding({ left: 12, right: 12 })
           .backgroundColor('#FFFFFF')
@@ -164,6 +164,7 @@ struct PlaylistDetailPage {
   async getMoreSongs(playlistId: number) {
     const songs = await getPlaylistSongs(playlistId, this.pageOffset);
     this.songs.pushDataFormArray(songs);
+    this.pageOffset += 30;
   }
 }
 

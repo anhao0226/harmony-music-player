@@ -8,7 +8,6 @@ import { AvPlayState, SongPlayMode, EventId } from './AudioConfig'
 export class AudioService {
   private playIndex: number = 0;
   private playList: SongModel[] = [];
-  private currAudioId: number = 0;
   private isPrepare: boolean = false;
   private avPlayer: media.AVPlayer | null = null;
   private avPlayerState: AvPlayState = AvPlayState.IDLE;
@@ -95,6 +94,7 @@ export class AudioService {
         let data = { 'song': JSON.stringify(song) }
         emitter.emit({ eventId: EventId.CHANGE_SONG }, { data: data });
         //
+        AppStorage.SetOrCreate<number>('PROGRESS', 0)
         AppStorage.SetOrCreate<number>('SONG_TIME', song.dt);
         AppStorage.SetOrCreate<boolean>('IS_PLAYING', false);
         AppStorage.SetOrCreate<number>('CURR_AUDIO_ID', song.id);

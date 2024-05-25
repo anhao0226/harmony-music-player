@@ -46,7 +46,6 @@ export struct SplitLayout {
           this.closer()
         }
         .width('100%')
-        .padding({ left: 12, right: 12 })
         .backgroundColor('#FFFFFF')
         .borderRadius({ topLeft: 14, topRight: 14 })
         .layoutWeight(1);

@@ -41,8 +41,8 @@ struct ArtistDetailPage {
 
   onPageShow() {
     const params = router.getParams();
-    // const artistId = params['artistId'] as number;
-    this.initData(7662);
+    const artistId = params['artistId'] as number;
+    this.initData(artistId);
   }
 
   initData(artistId: number) {

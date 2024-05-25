@@ -20,7 +20,6 @@ export struct PlayerProgressBar {
 
   onMeasure(children: Array<LayoutChild>, constraint: ConstraintSizeOptions) {
     children.forEach((child) => {
-      console.log(`Child : ${JSON.stringify(child)}`);
       this.maxWidth = constraint.maxWidth as number;
       child.measure(constraint);
     })
@@ -28,8 +27,6 @@ export struct PlayerProgressBar {
 
   calcValidMarkPos(): number {
     let result: number = 0;
-    console.log(this.songTime.toString());
-    console.log(this.duration.toString());
     if (Math.abs(this.songTime - this.duration) < 1000) result = 0;
     else if (this.songTime && this.duration) {
       result = (this.duration / this.songTime) * (this.maxWidth - 120);

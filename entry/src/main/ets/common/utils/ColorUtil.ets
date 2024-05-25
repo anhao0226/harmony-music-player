@@ -6,6 +6,7 @@ export function getNetworkImagePixelMap(url: string): Promise<image.PixelMap> {
   let httpRequest = http.createHttp();
   return new Promise(async (resolve, reject) => {
     try {
+      console.log(url);
       let response = await httpRequest.request(url);
       if (response.responseCode === 200) {
         let imageData = response.result;
@@ -41,6 +42,10 @@ export function isCloseWhiteColor(color: effectKit.Color) {
 
 export function rgbaToHexColor(color: effectKit.Color): string {
   return `#${color.alpha.toString(16)}${color.red.toString(16)}${color.green.toString(16)}${color.blue.toString(16)}`
+}
+
+export function rgba(r: number, g: number, b: number, a: number): string {
+  return `rgba(${r},${g},${b},${a})`;
 }
 
 
