@@ -1,100 +1,152 @@
 import { fetchSongLyric } from '../api/SongLyricApi';
+import { AudioService } from '../common/utils/AudioService';
 
 interface LyricInterface {
-  time: number,
-  text: string,
-  source: string,
+  time: number
+  text: string
+  source: string
 }
 
 @Component
 export struct LyricComponent {
-  @State lyricList: LyricInterface[] = [];
-  @State currIndex: number = 0;
-  private scroller: Scroller = new Scroller();
-  @StorageProp('PROGRESS') @Watch('onProgressChange') duration: number = 0;
-  @StorageProp('CURR_AUDIO_ID') @Watch('onCurrAudioChange') currAudioId: number = 0;
+  @State _lyricList: LyricInterface[] = [];
+  @State _activeIndex: number = 0;
+  private _ItemAreas: Area[] = [];
+  private _regExp = new RegExp(/\[(\d{2}):(\d{2})(\.(\d{2,3}))?]/);
+  private _scroller: Scroller = new Scroller();
+  @StorageProp('PROGRESS') @Watch('onProgressChange') progress: number = 0;
+  @StorageProp('AUDIO_ID') @Watch('onAudioChange') currAudioId: number = 0
 
-  aboutToAppear() {
-    this.handleSongLyric();
+  _reset() {
+    this._activeIndex = 0;
+    this._lyricList = []
+    this._scroller.scrollTo({ xOffset: 0, yOffset: 0 });
   }
 
-  onCurrAudioChange() {
-    this.lyricList = [];
-    this.currIndex = 0;
-    this.handleSongLyric();
+  onAudioChange() {
+    this._reset();
+    this.handleSongLyric(this.currAudioId);
+  }
+
+  aboutToAppear() {
+    console.log(`aboutToAppear === ${this.currAudioId.toString()}`);
+    this.onProgressChange()
+    this.handleSongLyric(AudioService.getInstance().getAudioId());
   }
 
   formatTime(str: string): number {
     let mSec = 2;
     let time = 0;
-    const timeArr = /\[(\d{2}):(\d{2})(\.(\d{2,3}))?]/.exec(str)?.map((item, index) => {
+    const timeArr = this._regExp.exec(str)?.map((item, index) => {
       if (index === 4) mSec = item?.length ?? mSec;
       return Number(item);
     });
-    time = timeArr[1] * 60 + timeArr[2] + (timeArr[4] / (mSec === 2 ? 100 : 1000) ?? 0)
+    time = timeArr[1] * 60 + timeArr[2] + (timeArr[4] / (mSec === 2 ? 100 : 1000) ?? 0);
     return time
   }
 
-  handleSongLyric() {
-    fetchSongLyric(this.currAudioId).then((lyricStr: string) => {
-      let lyricSplitList = lyricStr.split('\n');
-      let listCount = lyricSplitList.length;
-      let renderLyricList: LyricInterface[] = [];
-      for (let i = 0; i < listCount; i++) {
-        let timeMatchArr = lyricSplitList[i].match(/\[(\d{2}):(\d{2})(\.(\d{2,3}))?]/g);
-        if (timeMatchArr !== null) {
-          let text = lyricSplitList[i].replace(timeMatchArr[0], '');
-          const item = { time: this.formatTime(timeMatchArr[0]), text, source: lyricSplitList[i] };
-          renderLyricList.push(item);
-        }
+  matchLyric(source: string) {
+    const regValues = this._regExp.exec(source);
+    if (!regValues) return null;
+    let newStr: string = source.replace(regValues[0], '').trim();
+    newStr = newStr.length > 0 ? newStr : '...';
+    let time = this.formatTime(regValues[0]);
+    return { text: newStr, time, source }
+  }
+
+  // 27646198
+  handleSongLyric(songId: number) {
+    console.log(`handleSongLyric === ${songId.toString()}`);
+    fetchSongLyric(songId).then((value: string) => {
+      //
+      let lyrics: LyricInterface[] = [];
+      value.split('\n').forEach((str: string) => {
+        const regValue = this.matchLyric(str);
+        if (regValue) lyrics.push(regValue);
+      });
+
+      if(lyrics.length){
+        this._ItemAreas = new Array(lyrics.length);
+        this._lyricList = lyrics;
+        this.updateActiveIndex();
+      }else{
+
       }
-      this.lyricList = renderLyricList;
-
-      this.updateCurrIndex();
     }).catch((err) => {
-
+      console.log(`Error =========> ${err}`);
+      this._lyricList = [];
     })
   }
 
-  updateCurrIndex() {
-    if(this.lyricList.length > 0){
-      let i = this.currIndex;
-      while (i < this.lyricList.length) {
-        if (this.duration > this.lyricList[i].time * 1000) i++;
+  scrollTo(yOffset: number) {
+    this._scroller.scrollTo({ xOffset: 0, yOffset: yOffset,
+      animation: { duration: 625, curve: Curve.Ease } });
+  }
+
+  updateActiveIndex() {
+    if (this._lyricList.length > 0) {
+      let i = this._activeIndex;
+      while (i < this._lyricList.length) {
+        if (this.progress > this._lyricList[i].time * 1000) i++;
         else break;
       }
-      const index = i > 0 ? i - 1 : 0;
-      if (index !== this.currIndex) {
-        this.currIndex = index;
-        this.scroller.scrollTo({
-          xOffset: 0,
-          yOffset: this.currIndex * 50,
-          animation: { duration: 325, curve: Curve.EaseInOut }
-        });
+      let index: number = i > 0 ? i - 1 : 0;
+      if (index !== this._activeIndex) {
+        this._activeIndex = index;
+        const area: Area = this._ItemAreas[index];
+        this.scrollTo(area ? area.position.y as number : 0);
       }
     }
   }
 
   onProgressChange() {
-    console.log(this.duration.toString());
-    this.updateCurrIndex();
+    this.updateActiveIndex();
   }
 
   build() {
     Column() {
-      List({ scroller: this.scroller }) {
-        ListItem().height(150);
-        ForEach(this.lyricList, (item: LyricInterface, index: number) => {
-          ListItem() {
-            Row() {
-              Text(item.text)
-                .fontSize(20)
-                .fontColor((this.currIndex === index) ? '#DBFFFFFF' : '#66FFFFFF')
-                .textAlign(TextAlign.Center);
-            }
-          }.align(Alignment.Center).width('100%').height(50);
-        }, (_, index: number) => index.toString().concat('_LYRIC_ITEM'))
-      }.height('100%').width('100%');
-    }
+      if (this._lyricList.length) {
+        Scroll(this._scroller) {
+          Column() {
+            ForEach(this._lyricList, (item: LyricInterface, index: number) => {
+              /**
+               *
+               */
+                LyricItemComponent({
+                  text: item.text,
+                  isActive: this._activeIndex === index,
+                }).onAreaChange((_: Area, newVal: Area) => {
+                  if (!this._ItemAreas[index]) {
+                    this._ItemAreas[index] = newVal;
+                  }
+                });
+            }, (_, index: number) => `${index}_LYRIC_ITEM`);
+          };
+        }.scrollBar(BarState.Off).padding({ top: 20 });
+      } else {
+        Text('The song has no lyrics');
+      }
+    }.width('100%').height('100%');
+  }
+}
+
+
+@Component
+struct LyricItemComponent {
+  private text: string = '';
+  @Prop isActive: boolean;
+
+  aboutToAppear() {
+
+  }
+
+  build() {
+    Text(this.text)
+      .width('100%')
+      .fontSize(this.isActive ? 25 : 22)
+      .fontColor(this.isActive ? '#DBFFFFFF' : '#66FFFFFF')
+      .textAlign(TextAlign.Center)
+      .padding({ bottom: 20 })
+      .animation({ duration: 625, curve: Curve.EaseInOut });
   }
 }

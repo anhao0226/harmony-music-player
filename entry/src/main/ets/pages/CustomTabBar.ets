@@ -1,6 +1,11 @@
 import effectKit from '@ohos.effectKit';
+import { fetchSongs } from '../api/SongApi';
 import { fetchSongLyric } from '../api/SongLyricApi';
+import { AudioService } from '../common/utils/AudioService';
 import { rgbaToHexColor } from '../common/utils/ColorUtil';
+import { PlaylistDialogComponent } from '../components/PlaylistDialogComponent';
+import { SongInfoDialogComponent } from '../components/SongInfoIDialogContent';
+import { Song } from '../models/SongModel';
 
 // @Component
 // struct TestComp {
@@ -114,9 +119,9 @@ export struct LyComponent {
         lyricStrList.pop();
         let renderLyricList: LyricInterface[] = [];
 
-        lyricStrList.forEach(((item:string) => {
+        lyricStrList.forEach(((item: string) => {
           let timeMatchArr = item.match(/\[(\d{2}):(\d{2})(\.(\d{2,3}))?]/g);
-          if(timeMatchArr){
+          if (timeMatchArr) {
             let text = item.replace(timeMatchArr[0], '');
             renderLyricList.push({ time: this.formatTime(timeMatchArr[0]), text, source: item });
           }
@@ -196,12 +201,53 @@ export struct LyComponent {
 //   console.log(JSON.stringify(lrcItem));
 // });
 
+class Example {
+  private _name: string;
+
+  get name(): string {
+    return this._name;
+  }
+
+  set name(value: string) {
+    AppStorage.SetOrCreate('NAME', value);
+    console.log(value);
+    this._name = value;
+  }
+}
+
 @Entry
 @Component
 struct ExPage {
+  @StorageProp('NAME') name: string = 'aaa'
+  private _toStr: string = '';
+  @State _song: Song = null;
+  @State vals: number[] = [1, 2, 3, 4, 5, 6, 7];
+  @State copyValues: number[] = [];
+
+  aboutToAppear() {
+    this.copyValues = [...this.vals].reverse();
+  }
+
+  toJson() {
+
+  }
+
   build() {
     Column() {
-      LyComponent();
-    }.height('100%').width('100%')
+
+      ForEach(this.copyValues, (item: number, index: number) => {
+        Text(item.toString())
+          .height(56)
+          .width('100%')
+          .textAlign(TextAlign.Center)
+          .borderWidth(1)
+          .onClick(() => {
+            const endIndex = this.vals.length - 1 - index
+            this.copyValues = [...this.copyValues.slice(endIndex)];
+          });
+      }, (item, index) => `${item.toString()}_ITEM`);
+
+
+    }
   }
 }

@@ -1,3 +1,4 @@
+
 import { httpRequestGet } from '../common/utils/HttpClient';
 import { TabBarItemInterface } from '../components/CustomTabBar';
 // import { TabBarItemInterface } from '../components/CustomTabBar';
@@ -33,7 +34,25 @@ export class SongModel {
   ar: ArtistModel[];
   dt: number;
 
-  constructor() {
+  fromJson(json: Object): SongModel {
+    this.id = json['id'];
+    this.name = json['name'];
+    this.mv = json['mv'];
+    this.fee = json['fee'];
+    this.dt = json['dt'];
+    if (json['al'] !== null) { // Album
+      const album = json['al'];
+      this.al = new AlbumModel(album['id'], album['name'], album['picUrl']);
+    }
+    if (json['ar'] !== null && Array.isArray(json['ar'])) { //Artists
+      let artists = json['ar'];
+      let ars: ArtistModel[] = [];
+      artists.forEach((item) => {
+        ars.push(new ArtistModel(item['id'], item['name']));
+      })
+      this.ar = ars;
+    }
+    return this;
   }
 
   formJson(json: any): SongModel {
@@ -70,6 +89,7 @@ export class PlaylistModel {
   description: string;
   createTime: number;
   updateTime: number;
+  commentCount: number;
 
   formJson(json: any): PlaylistModel {
     this.id = json['id'];
@@ -81,6 +101,7 @@ export class PlaylistModel {
     this.description = json['description'];
     this.createTime = json['createTime'];
     this.updateTime = json['updateTime'];
+    this.commentCount = json['commentCount'];
     return this;
   }
 }
@@ -234,7 +255,7 @@ export function getPlaylistCategory(): Promise<CategoryModel[]> {
 //
 export function getHighQualityPlaylist(cat: string, before: number) {
   const accessUrl = '/top/playlist/highquality';
-  const queryParams = { 'cat': cat, 'before': before, 'limit': 20 };
+  const queryParams = { cat, before, 'limit': 24 };
   return httpRequestGet(accessUrl, { queryParams }).then((result) => {
     if (result['code'] !== 200) return Error('');
     let playlists: PlaylistModel[] = [];

@@ -5,6 +5,12 @@ export interface TabBarItemInterface {
   getText: () => string;
 }
 
+export interface MenuItemInterface {
+  text: string;
+  icon?: Resource;
+  onTap?: () => void;
+}
+
 /**
  * CustomTabBar
  */
@@ -13,7 +19,12 @@ export struct CustomTabBar {
   @State currentIndex: number = 0;
   @State barWidth: number = 0;
   @BuilderParam viewBuilder: (item: TabBarItemInterface, index: number) => void;
+  @BuilderParam menuBuilder?: () => void = this._defaultMenuBuilder;
+
+  @Builder _defaultMenuBuilder() {
+  }
   //
+  @Link tabs: TabBarItemInterface[];
   @Link items: TabBarItemInterface[];
   private itemCount: number = 0;
   private itemAreaList: Area[] = [];
@@ -84,18 +95,22 @@ export struct CustomTabBar {
               }, (_, index) => `${index}_TAB_ITEM`);
             }.height(this.barHeight - this.underlineHeight)
             // underline
-            UnderlineComponent({
-              _height: this.underlineHeight,
-              _width: this.underlineWidth,
-              _color: this.underlineColor,
-            }).offset({ x: this.underlineXOffset })
+            _UnderlineComponent({
+              compHeight: this.underlineHeight,
+              compWidth: this.underlineWidth,
+              fillColor: this.underlineColor,
+            }).offset({ x: this.underlineXOffset });
 
           }
           .height(this.barHeight)
           .alignItems(HorizontalAlign.Start);
         }
         .scrollable(ScrollDirection.Horizontal)
-        .scrollBar(BarState.Off);
+        .scrollBar(BarState.Off).layoutWeight(1);
+        //
+
+        if (this.menuBuilder) this.menuBuilder();
+
       }.width('100%').justifyContent(FlexAlign.Center);
 
       /**
@@ -114,25 +129,6 @@ export struct CustomTabBar {
   }
 }
 
-@Component
-struct _TabViewWrapper {
-  @Prop @Watch('onIsRender') isRender: boolean;
-  @BuilderParam closer: () => void;
-
-  aboutToDisappear() {
-    console.log('aboutToDisappear');
-  }
-
-  onIsRender() {
-    console.log(`onIsRender ${this.isRender}`);
-  }
-
-  build() {
-    if (this.isRender) this.closer();
-    else Row();
-  }
-}
-
 /**
  * _TabBarView
  */
@@ -140,9 +136,10 @@ struct _TabViewWrapper {
 struct _TabBarView {
   @Link @Watch('handleItemsChange') items: any[];
   @Prop @Watch('handleShareIndexChange') sharedIndex: number;
+  @State currentIndex: number = 0;
   @State viewStateList: boolean[] = [];
   @BuilderParam viewBuilder: (item: TabBarItemInterface, index: number) => void;
-  @State protected currentIndex: number = 0;
+  //
   private scroller: Scroller = new Scroller()
   private itemViewWidth: number = 0;
   //
@@ -154,7 +151,7 @@ struct _TabBarView {
   private scrollStopEvents: (() => void)[] = [];
 
   aboutToAppear() {
-    console.log('_TabBarView aboutToAppear')
+    this.initViewState();
   }
 
   updateCurrentIndex(index: number) {
@@ -205,8 +202,8 @@ struct _TabBarView {
       if (index >= 0 && index !== this.currentIndex) {
         this.updateCurrentIndex(index);
       }
+      this.checkSwipeGesture = false;
     }
-    this.checkSwipeGesture = false;
   }
 
   handleScrollAreaChange(oldVal: Area, newVal: Area) {
@@ -217,10 +214,16 @@ struct _TabBarView {
     this.updateCurrentIndex(this.sharedIndex);
   }
 
-  handleItemsChange() {
+  initViewState() {
     const itemCount = this.items.length;
-    this.viewStateList = new Array(itemCount).fill(false, 0, itemCount);
-    if (itemCount) this.viewStateList[this.currentIndex] = true;
+    if (itemCount > 0) {
+      this.viewStateList = new Array(itemCount).fill(false, 0, itemCount);
+      this.viewStateList[this.currentIndex] = true;
+    }
+  }
+
+  handleItemsChange() {
+    this.initViewState();
   }
 
   build() {
@@ -252,6 +255,17 @@ struct _TabBarView {
 }
 
 @Component
+struct _UnderlineComponent {
+  @Prop fillColor: string;
+  @Prop compWidth: number;
+  @Prop compHeight: number;
+
+  build() {
+    Row().width(this.compWidth).height(this.compHeight).backgroundColor(this.fillColor);
+  }
+}
+
+@Component
 struct UnderlineComponent {
   @Prop _color: string;
   @Prop @Watch('onLineWidthChange') _width: number;
@@ -277,11 +291,6 @@ struct UnderlineComponent {
   }
 
   build() {
-    Canvas(this.context)
-      .width(this._width)
-      .height(this._height)
-      .onReady(() => {
-        this.drawLine();
-      });
+    Row().width(this._width).height(this._height).backgroundColor(this._color);
   }
 }

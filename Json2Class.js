@@ -1,42 +1,65 @@
-var jsonStr = `
-{
-    "sgc": false,
-    "sfy": false,
-    "qfy": false,
-    "transUser": {
-        "id": 18129897,
-        "status": 99,
-        "demand": 1,
-        "userid": 411380049,
-        "nickname": "dumb_eraser",
-        "uptime": 1615259404144
-    },
-    "lyricUser": {
-        "id": 18128402,
-        "status": 99,
-        "demand": 0,
-        "userid": 3237397719,
-        "nickname": "北川春彦",
-        "uptime": 1615246609516
-    },
-    "lrc": {
-        "version": 6,
-        "lyric": ""
-    },
-    "klyric": {
-        "version": 0,
-        "lyric": ""
-    },
-    "tlyric": {
-        "version": 13,
-        "lyric": ""
-    },
-    "romalrc": {
-        "version": 5,
-        "lyric": ""
-    },
-    "code": 200
-}
+
+const jsonStr = `
+   {
+            "id": 347230,
+            "fee": 1,
+            "payed": 0,
+            "st": 0,
+            "pl": 0,
+            "dl": 0,
+            "sp": 7,
+            "cp": 1,
+            "subp": 1,
+            "cs": false,
+            "maxbr": 999000,
+            "fl": 0,
+            "toast": false,
+            "flag": 1028,
+            "preSell": false,
+            "playMaxbr": 999000,
+            "downloadMaxbr": 999000,
+            "maxBrLevel": "lossless",
+            "playMaxBrLevel": "lossless",
+            "downloadMaxBrLevel": "lossless",
+            "plLevel": "none",
+            "dlLevel": "none",
+            "flLevel": "none",
+            "rscl": null,
+            "freeTrialPrivilege": {
+                "resConsumable": true,
+                "userConsumable": false,
+                "listenType": null,
+                "cannotListenReason": null,
+                "playReason": null
+            },
+            "rightSource": 0,
+            "chargeInfoList": [
+                {
+                    "rate": 128000,
+                    "chargeUrl": null,
+                    "chargeMessage": null,
+                    "chargeType": 1
+                },
+                {
+                    "rate": 192000,
+                    "chargeUrl": null,
+                    "chargeMessage": null,
+                    "chargeType": 1
+                },
+                {
+                    "rate": 320000,
+                    "chargeUrl": null,
+                    "chargeMessage": null,
+                    "chargeType": 1
+                },
+                {
+                    "rate": 999000,
+                    "chargeUrl": null,
+                    "chargeMessage": null,
+                    "chargeType": 1
+                }
+            ]
+        }
 `
 
 function upperFirstCase(str) {
@@ -59,6 +82,8 @@ var VariableType;
     VariableType["Number"] = "[object Number]";
     VariableType["Boolean"] = "[object Boolean]";
     VariableType["String"] = "[object String]";
+    VariableType["Object"] = "[object Object]";
+    VariableType["Array"] = "[object Array]";
 })(VariableType || (VariableType = {}));
 function hasOwn(o, key) {
     return Object.prototype.hasOwnProperty.call(o, key);
@@ -95,7 +120,7 @@ function helper2(toJson, className, suffix, classMap) {
                 helper2(toJson[key], _className, suffix_1, classMap);
                 break;
             case '[object Array]':
-                classStr += "".concat(key, ":any[];\r\n");
+                classStr += handleArrayType(toJson, key, classMap);
                 break;
             case VariableType.String:
                 classStr += "".concat(key, ":").concat(matchType(VariableType.String), ";");
@@ -107,14 +132,48 @@ function helper2(toJson, className, suffix, classMap) {
     classStr += '}';
     classMap[className] = classStr;
 }
+function classVariableTemplate(key, tpy) {
+    return "".concat(key, ":").concat(matchType(tpy), ";\r\n");
+}
+function classArrayVariableTemplate(key, tpy) {
+    return "".concat(key, ":").concat(matchType(tpy), "[];\r\n");
+}
+function classObjectVariableTemplate(key, className, suffix) {
+    return "".concat(key, ":").concat(className).concat(suffix, "[];\r\n");
+}
+function assignmentTemplate() {
+}
+// [[[{ name:1 }]]]
+function handleArrayType(toJson, key, classMap) {
+    var value = toJson[key];
+    if (value.length > 0) {
+        var tpy = checkType(value[0]);
+        switch (tpy) {
+            case VariableType.Array:
+                // handleArrayType(value, )
+                break;
+            case VariableType.Object:
+                var _className = upperFirstCase(key);
+                helper2(value[0], _className, 'Model', classMap);
+                return classObjectVariableTemplate(key, _className, 'Model');
+            case VariableType.Boolean:
+            case VariableType.Null:
+            case VariableType.Number:
+            case VariableType.String:
+                return classArrayVariableTemplate(key, tpy);
+        }
+    }
+    else {
+        return classArrayVariableTemplate(key, VariableType.Null);
+    }
+}
 var saveDirectory = './entry/src/main/ets/view_models';
 function Json2Class(str, filename) {
     try {
-        str = str.replace(/[\r\n\s+]/g, '');
-        console.log(JSON.stringify(str));
+        str = str.replace('\n', '');
         var toJson = JSON.parse(str);
         var classMap = {};
-        helper2(toJson, 'Lyric', 'Model', classMap);
+        helper2(toJson, 'Privilege', 'Model', classMap);
         var fs = require('fs');
         var filepath = "".concat(saveDirectory, "/").concat(filename, ".ets");
         fs.writeFile(filepath, Object.values(classMap).join('\r\n'), function (err) {
@@ -128,4 +187,4 @@ function Json2Class(str, filename) {
         console.log(err);
     }
 }
-Json2Class(jsonStr, 'LyricModel');
+Json2Class(jsonStr, 'PrivilegeModel');

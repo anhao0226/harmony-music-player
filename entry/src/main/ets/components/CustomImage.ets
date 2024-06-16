@@ -18,7 +18,7 @@ export struct CustomImage {
         });
 
       Column() {
-        Image($r('app.media.album')).width(60).height(60);
+        Image($r('app.media.ic_public_album_fill')).width(60).height(60);
       }
       .width(this.imageWidth)
       .height(this.imageWidth)

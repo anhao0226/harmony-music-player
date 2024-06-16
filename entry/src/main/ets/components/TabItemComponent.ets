@@ -6,34 +6,29 @@ import { CustomImage } from './CustomImage';
 
 @Component
 export struct TabItemComponent {
-  private category: CategoryModel;
-  scroller: Scroller = new Scroller()
-  @State playlists: PlaylistDataSource = new PlaylistDataSource();
   @State currentBp: string = 'unknown';
   @State isLoading: boolean = false;
   @State showMask: boolean = true;
   @State imageWidth: number = 0;
   @State _itemH: number = 0;
+  private category: CategoryModel;
+  private scroller: Scroller = new Scroller()
+  private playlists: PlaylistDataSource = new PlaylistDataSource();
   private onDataChange: (value: PlaylistModel) => void;
+  private _lastUpdateTime: number = 0;
 
   aboutToAppear() {
-    this.isLoading = true;
-    getHighQualityPlaylist(this.category.name, 0).then((data: PlaylistModel[]) => {
-      const count = data.length;
-      if (count) {
-        console.log(JSON.stringify(data[0].coverImgUrl));
-        if (this.onDataChange) this.onDataChange(data[0]);
-        for (let index = 0; index < count; index++) {
-          console.log(data[index].coverImgUrl);
-          this.playlists.pushData(data[index]);
-        }
-      }
-      this.isLoading = false;
-    })
+    this.getData(this._lastUpdateTime);
   }
 
-  aboutToDisappear() {
-    console.log('TabItemComponent aboutToDisappear')
+  getData(before: number) {
+    getHighQualityPlaylist(this.category.name, before).then((data: PlaylistModel[]) => {
+      if (data.length) {
+        if (this.onDataChange) this.onDataChange(data[0]);
+      }
+      this.playlists.pushDataFromArray(data);
+      this._lastUpdateTime = data[data.length - 1].updateTime;
+    })
   }
 
   @Builder ListItemBuild(item: PlaylistModel) {
@@ -41,7 +36,7 @@ export struct TabItemComponent {
       Stack({ alignContent: Alignment.BottomStart }) {
         CustomImage({ src: item.coverImgUrl, imageWidth: this.imageWidth });
         Row({ space: 6 }) {
-          Image($r('app.media.ic_public_play_norm'))
+          Image($r('app.media.ic_public_more_2_fill'))
             .width(22).fillColor('#FFFFFF');
           Text(item.playCount.toString())
             .fontColor('#FFFFFF').fontSize(12);
@@ -74,7 +69,11 @@ export struct TabItemComponent {
           .onAreaChange((_: Area, newVal: Area) => {
             const totalSpace: number = 5 * 10;
             this.imageWidth = (newVal.width as number - totalSpace) / 6;
+          })
+          .onReachEnd(() => {
+            this.getData(this._lastUpdateTime);
           });
+
         }.padding({ left: 20, right: 20 })
         //
         Column() {

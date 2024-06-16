@@ -4,17 +4,21 @@ export class PlaylistDataSource implements IDataSource {
   private dataArray: PlaylistModel[] = [];
   private listeners: DataChangeListener[] = [];
 
-  getData(index: number): PlaylistModel {
+  public getData(index: number): PlaylistModel {
     return this.dataArray[index];
   }
 
-  totalCount(): number {
+  public totalCount(): number {
     return this.dataArray.length;
   }
 
   public pushData(data: PlaylistModel): void {
     this.dataArray.push(data);
     this.notifyDataAdd(this.dataArray.length - 1);
+  }
+
+  public pushDataFromArray(arr: PlaylistModel[]) {
+    arr.forEach((item) => this.pushData(item));
   }
 
   public addData(index: number, data: PlaylistModel): void {

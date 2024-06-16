@@ -1,12 +1,12 @@
 import { AudioService } from '../common/utils/AudioService';
-import { PlayControlComponent } from '../components/PlayControlComponent';
+import { BottomBarControlComponent } from '../components/BottomBarControlComponent';
 import { TabItemComponent } from '../components/TabItemComponent';
 import { CategoryModel, getPlaylistCategory, PlaylistModel, } from '../view_models/playlist_song_model';
 import window from '@ohos.window';
 import { CustomTabBar } from '../components/CustomTabBar';
 import { getDarkColor, getImageMainColor, getNetworkImagePixelMap, rgbaToHexColor } from '../common/utils/ColorUtil';
-import effectKit from '@ohos.effectKit';
 import image from '@ohos.multimedia.image';
+import router from '@ohos.router';
 
 @Entry
 @Component
@@ -30,15 +30,6 @@ struct Index {
     this.tabItemLoadStateArr = new Array(this.categories.length).fill(false);
   }
 
-  @Builder TabBarViewBuilder(item: CategoryModel, index: number) {
-    TabItemComponent({
-      category: item,
-      onDataChange: (value: PlaylistModel) => {
-        this.updateNavBackgroundColor(value.coverImgUrl);
-      }
-    });
-  }
-
   async updateNavBackgroundColor(imgSrc: string) {
     try {
       let pixelMap = await getNetworkImagePixelMap(imgSrc);
@@ -48,6 +39,28 @@ struct Index {
     } catch (err) {
       console.log(err);
     }
+  }
+
+  @Builder TabBarViewBuilder(item: CategoryModel, index: number) {
+    TabItemComponent({
+      category: item,
+      onDataChange: (value: PlaylistModel) => {
+        this.updateNavBackgroundColor(value.coverImgUrl);
+      }
+    });
+  }
+
+  @Builder menuBuilder() {
+    Row() {
+      Row()
+        .backgroundColor('#19000000')
+        .height(30)
+        .width('100%')
+        .borderRadius(42)
+        .onClick(() => {
+          router.pushUrl({ url: 'pages/SearchPage' });
+        })
+    }.width(150).padding({ right: 30 });
   }
 
   build() {
@@ -66,12 +79,16 @@ struct Index {
           fontSize: 20,
           barHeight: 56,
           items: $categories,
+          tabs: $categories,
+          menuBuilder: this.menuBuilder.bind(this),
           viewBuilder: this.TabBarViewBuilder.bind(this),
           unselectedColor: '#66FFFFFF',
           selectedColor: '#FFFFFF',
           underlineColor: '#FFFFFF',
         }).layoutWeight(1);
-        PlayControlComponent().key(this.TAG);
+        //
+        BottomBarControlComponent().key(this.TAG);
+
       }
     }
   }

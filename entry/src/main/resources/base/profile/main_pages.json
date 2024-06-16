@@ -8,6 +8,8 @@
     "pages/AlbumDetailPage",
     "pages/CanvasExample",
     "pages/CustomTabBar",
-    "pages/Comments"
+    "pages/Comments",
+    "pages/SearchPage",
+    "pages/MvPlayerPage"
   ]
 }

@@ -1,62 +1,151 @@
-const jsonStr = `{
-  "user": {
-      "locationInfo": null,
-      "liveInfo": null,
-      "anonym": 0,
-      "commonIdentity": null,
-      "followed": false,
-      "mutual": false,
-      "remarkName": null,
-      "socialUserId": null,
-      "vipRights": {
-          "associator": null,
-          "musicPackage": null,
-          "redplus": null,
-          "redVipAnnualCount": -1,
-          "redVipLevel": 0,
-          "relationType": 0
-      },
-      "nickname": "何处有祢",
-      "authStatus": 0,
-      "expertTags": null,
-      "experts": null,
-      "vipType": 0,
-      "userType": 0,
-      "avatarDetail": null,
-      "avatarUrl": "http://p4.music.126.net/7TbJ_sHvB1yMTXyiLO8MNg==/109951164546273368.jpg",
-      "userId": 341199929,
-      "target": null
-  },
-  "beReplied": [],
-  "pendantData": null,
-  "showFloorComment": null,
-  "status": 0,
-  "commentId": 366198751,
-  "content": "这个强迫症歌单还是做得不够全面啊，作为一个强迫症晚期患者，你这个歌名，怎么能不按拼音来排序呢！！！！！🌚🌚",
-  "richContent": null,
-  "contentResource": null,
-  "time": 1493165122763,
-  "timeStr": "2017-04-26",
-  "needDisplayTime": true,
-  "likedCount": 1018,
-  "expressionUrl": null,
-  "commentLocationType": 0,
-  "parentCommentId": 0,
-  "decoration": {
-      "repliedByAuthorCount": 0
-  },
-  "repliedMark": null,
-  "grade": null,
-  "userBizLevels": null,
-  "ipLocation": {
-      "ip": null,
-      "location": "",
-      "userId": null
-  },
-  "owner": false,
-  "medal": null,
-  "liked": false
-}`;
+var jsonStr = `
+{
+                "name": "",
+                "id": 1357375695,
+                "pst": 0,
+                "t": 0,
+                "ar": [
+                    {
+                        "id": 11127,
+                        "name": "Beyond",
+                        "tns": [
+                            ""
+                        ],
+                        "alias": []
+                    }
+                ],
+                "alia": [],
+                "pop": 100,
+                "st": 0,
+                "rt": "",
+                "fee": 1,
+                "v": 12,
+                "crbt": null,
+                "cf": "",
+                "al": {
+                    "id": 78372827,
+                    "name": "",
+                    "picUrl": "",
+                    "tns": [],
+                    "pic_str": "109951163984013003",
+                    "pic": 109951163984013010
+                },
+                "dt": 239560,
+                "h": {
+                    "br": 320000,
+                    "fid": 0,
+                    "size": 9584893,
+                    "vd": 3991,
+                    "sr": 44100
+                },
+                "m": {
+                    "br": 192000,
+                    "fid": 0,
+                    "size": 5750953,
+                    "vd": 6570,
+                    "sr": 44100
+                },
+                "l": {
+                    "br": 128000,
+                    "fid": 0,
+                    "size": 3833983,
+                    "vd": 8220,
+                    "sr": 44100
+                },
+                "sq": {
+                    "br": 1508256,
+                    "fid": 0,
+                    "size": 45164780,
+                    "vd": 4001,
+                    "sr": 44100
+                },
+                "hr": null,
+                "a": null,
+                "cd": "01",
+                "no": 1,
+                "rtUrl": null,
+                "ftype": 0,
+                "rtUrls": [],
+                "djId": 0,
+                "copyright": 1,
+                "s_id": 0,
+                "mark": 17179877376,
+                "originCoverType": 0,
+                "originSongSimpleData": null,
+                "tagPicList": null,
+                "resourceState": true,
+                "version": 12,
+                "songJumpInfo": null,
+                "entertainmentTags": null,
+                "single": 0,
+                "noCopyrightRcmd": null,
+                "rtype": 0,
+                "rurl": null,
+                "mst": 9,
+                "cp": 7002,
+                "mv": 5501497,
+                "publishTime": 737308800000,
+                "privilege": {
+                    "id": 1357375695,
+                    "fee": 1,
+                    "payed": 0,
+                    "st": 0,
+                    "pl": 0,
+                    "dl": 0,
+                    "sp": 0,
+                    "cp": 0,
+                    "subp": 1,
+                    "cs": false,
+                    "maxbr": 999000,
+                    "fl": 0,
+                    "toast": false,
+                    "flag": 260,
+                    "preSell": false,
+                    "playMaxbr": 999000,
+                    "downloadMaxbr": 999000,
+                    "maxBrLevel": "lossless",
+                    "playMaxBrLevel": "lossless",
+                    "downloadMaxBrLevel": "lossless",
+                    "plLevel": "none",
+                    "dlLevel": "none",
+                    "flLevel": "none",
+                    "rscl": null,
+                    "freeTrialPrivilege": {
+                        "resConsumable": true,
+                        "userConsumable": false,
+                        "listenType": null,
+                        "cannotListenReason": null
+                    },
+                    "rightSource": 0,
+                    "chargeInfoList": [
+                        {
+                            "rate": 128000,
+                            "chargeUrl": null,
+                            "chargeMessage": null,
+                            "chargeType": 1
+                        },
+                        {
+                            "rate": 192000,
+                            "chargeUrl": null,
+                            "chargeMessage": null,
+                            "chargeType": 1
+                        },
+                        {
+                            "rate": 320000,
+                            "chargeUrl": null,
+                            "chargeMessage": null,
+                            "chargeType": 1
+                        },
+                        {
+                            "rate": 999000,
+                            "chargeUrl": null,
+                            "chargeMessage": null,
+                            "chargeType": 1
+                        }
+                    ]
+                }
+            }
+`;
 
 function upperFirstCase(str: string): string {
   const len = str.length;
@@ -77,6 +166,8 @@ enum VariableType {
   Number = '[object Number]',
   Boolean = '[object Boolean]',
   String = '[object String]',
+  Object = '[object Object]',
+  Array = '[object Array]',
 }
 
 function hasOwn(o: unknown, key: string): boolean {
@@ -87,7 +178,7 @@ function matchType(valType: string) {
   return hasOwn(Value2ClassType, valType) ? Value2ClassType[valType] : '';
 }
 
-function checkType(value: any):string{
+function checkType(value: any): string {
   return Object.prototype.toString.call(value);
 }
 
@@ -118,7 +209,7 @@ function helper2(toJson: any, className: string, suffix: string, classMap: Recor
         helper2(toJson[key], _className, suffix, classMap);
         break;
       case '[object Array]':
-        classStr += `${key}:any[];\r\n`;
+        classStr += handleArrayType(toJson, key, classMap);
         break;
       case VariableType.String:
         classStr += `${key}:${matchType(VariableType.String)};`;
@@ -131,12 +222,52 @@ function helper2(toJson: any, className: string, suffix: string, classMap: Recor
   classMap[className] = classStr;
 }
 
+function classVariableTemplate(key:string, tpy: VariableType):string{
+  return `${key}:${matchType(tpy)};\r\n`;
+}
+
+function classArrayVariableTemplate(key:string, tpy: VariableType):string{
+  return `${key}:${matchType(tpy)}[];\r\n`;
+}
+
+function classObjectVariableTemplate(key:string, className: string, suffix: string):string{
+  return `${key}:${className}${suffix}[];\r\n`;
+}
+
+function assignmentTemplate(){
+  
+}
+
+// [[[{ name:1 }]]]
+
+function handleArrayType(toJson: any, key: string, classMap: Record<string, any>){
+  const value = toJson[key];
+  if (value.length > 0) {
+    const tpy = checkType(value[0]);
+    switch (tpy) {
+      case VariableType.Array:
+        // handleArrayType(value, )
+        break;
+      case VariableType.Object:
+        let _className: string = upperFirstCase(key);
+        helper2(value[0], _className, 'Model', classMap);
+        return classObjectVariableTemplate(key, _className, 'Model');
+      case VariableType.Boolean:
+      case VariableType.Null:
+      case VariableType.Number:
+      case VariableType.String:
+        return classArrayVariableTemplate(key, tpy);
+    }
+  } else {
+    return classArrayVariableTemplate(key, VariableType.Null);
+  }
+}
 
 const saveDirectory = './entry/src/main/ets/view_models';
 
-function Json2Class(str: string, filename:string) {
+function Json2Class(str: string, filename: string) {
   try {
-    str = str.replace('\n', '\\n');
+    str = str.replace('\n', '');
     let toJson = JSON.parse(str);
     let classMap = {};
     helper2(toJson, 'Comment', 'Model', classMap);
@@ -150,7 +281,7 @@ function Json2Class(str: string, filename:string) {
     });
 
   } catch (err) {
-    
+    console.log(err);
   }
 }
 
