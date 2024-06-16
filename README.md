@@ -1,1 +1,5 @@
-init
+![image](https://github.com/anhao0226/harmony-music-player/blob/main/preview_images/01.jpg)
+![image](https://github.com/anhao0226/harmony-music-player/blob/main/preview_images/02.jpg)
+![image](https://github.com/anhao0226/harmony-music-player/blob/main/preview_images/03.jpg)
+![image](https://github.com/anhao0226/harmony-music-player/blob/main/preview_images/04.jpg)
+![image](https://github.com/anhao0226/harmony-music-player/blob/main/preview_images/05.jpg)
