@@ -1,18 +1,16 @@
 import media from '@ohos.multimedia.media';
-import emitter from '@ohos.events.emitter';
-import { SongModel, getSongUrl, defaultSongItem } from '../../view_models/playlist_song_model';
-import { StorageService } from './StorageService';
-import { AvPlayState, SongPlayMode, EventId } from './AudioConfig'
-
+import preferences from '@ohos.data.preferences';
+import { SongModel, getSongUrl } from '../../view_models/playlist_song_model';
+import { AvPlayerState, AvPlayMode } from './AudioConfig';
+import { AudioShareData } from './AudioShareData';
+import { Song } from '../../models/SongModel';
+import { fetchSongs, fetchSongUrl } from '../../api/SongApi';
 
 export class AudioService {
-  private playIndex: number = 0;
-  private playList: SongModel[] = [];
-  private currAudioId: number = 0;
-  private isPrepare: boolean = false;
-  private avPlayer: media.AVPlayer | null = null;
-  private avPlayerState: AvPlayState = AvPlayState.IDLE;
-  private playMode: SongPlayMode = SongPlayMode.ORDER;
+  private _isPrepare: boolean = false;
+  private _avPlayer: media.AVPlayer | null = null;
+  private _avPlayerState: AvPlayerState = AvPlayerState.IDLE;
+  private _shareData: AudioShareData<Song> = new AudioShareData<Song>();
 
   constructor() {
     this.initAudioPlayer();
@@ -25,212 +23,302 @@ export class AudioService {
       AppStorage.SetOrCreate('AUDIO_SERVICE', audioService);
     }
     return audioService;
-    return new AudioService();
   }
 
   public initAudioPlayer() {
-    media.createAVPlayer().then((avPlayer: media.AVPlayer) => {
-      this.avPlayer = avPlayer;
+    media.createAVPlayer().then((_avPlayer: media.AVPlayer) => {
+      this._avPlayer = _avPlayer;
       this.setAVPlayerCallback();
     }).catch((err: Error) => {
       console.log(`CreateAVPlayerError : ${JSON.stringify(err)}`);
     });
   }
 
-  public initData(data: SongModel[], index?: number) {
-    this.updatePlaylist(data);
-    index = index | 0;
-    this.updatePlayIndex(index)
-    if (data.length > 0 && index < data.length) {
-      AppStorage.SetOrCreate('SONG_ITEM', data[index]);
-    }
+  /**
+   *
+   * @returns
+   */
+  public getAudioId() {
+    return this._shareData.audioId;
   }
 
+  /**
+   *
+   * @returns
+   */
   public getPlayMode() {
-    return this.playMode;
+    return this._shareData.playMode;
   };
 
-  public updatePlayMode(mode: SongPlayMode) {
-    this.playMode = mode;
-    StorageService.getInstance().put('PLAY_MODE', JSON.stringify(mode));
+  /**
+   *
+   * @param mode
+   */
+  public setPlayMode(mode: AvPlayMode) {
+    this._shareData.playMode = mode;
   }
 
-  private updatePlaylist(data: SongModel[]) {
-    this.playList = data;
-    StorageService.getInstance().put('PLAY_LIST', JSON.stringify(data));
+  /**
+   *
+   * @param data
+   */
+  public setPlaylist(data: Song[]) {
+    this._shareData.playlist = data;
   }
 
-  private updatePlayIndex(index: number) {
-    this.playIndex = index;
-    StorageService.getInstance().put('PLAY_INDEX', index);
+  public playlist(): Song[] {
+    return this._shareData.playlist;
+  };
+
+  public history(): Song[] {
+    return this._shareData.history;
   }
 
+  /**
+   *
+   */
   public playPrevious() {
-    let playIndex = this.playIndex - 1;
-    if (this.playIndex === -1) {
-      playIndex = this.playList.length - 1;
-    }
-    this.start(playIndex);
+    this.start(this._shareData.prevIndex());
   }
 
-  public playlist(): SongModel[] {
-    return this.playList
-  };
+  /**
+   *
+   */
+  public playIndex() {
+    return this._shareData.playIndex;
+  }
 
+  /**
+   *
+   */
   public playNext() {
-    let playIndex = this.playIndex + 1;
-    if (playIndex === this.playList.length) {
-      playIndex = 0;
+    let flag: { type: string } = null;
+    let index = this._shareData.nextIndex();
+    if (this._shareData.nextQueueCount()) {
+      flag = { type: 'next' };
+      index = 0
     }
-    this.start(playIndex);
+    this.start(index, flag);
   }
 
-  public start(seek?: number) {
-    if (this.avPlayer) {
-      this.avPlayer.reset().then(async () => {
-        const index: number = seek || this.playIndex;
-        const song = this.playList[index];
-        this.updatePlayIndex(index);
-        //
-        let data = { 'song': JSON.stringify(song) }
-        emitter.emit({ eventId: EventId.CHANGE_SONG }, { data: data });
-        //
-        AppStorage.SetOrCreate<number>('SONG_TIME', song.dt);
-        AppStorage.SetOrCreate<boolean>('IS_PLAYING', false);
-        AppStorage.SetOrCreate<number>('CURR_AUDIO_ID', song.id);
-        //
-        getSongUrl(song.id).then((value) => {
-          this.avPlayer.url = value.url;
+  /**
+   *
+   * @param song
+   */
+  public addNextPlaySong(song: Song) {
+    this._shareData.addNextPlaySong(song);
+  }
+
+  /**
+   *
+   * @returns
+   */
+  public nextPlaylist(): Song[] | null {
+    return this._shareData.nextQueue;
+  }
+
+
+  /**
+   *
+   * @param seek
+   */
+  public start(seek?: number, flag?: Object) {
+    //
+    let listType: string = 'list';
+    if (flag && flag.hasOwnProperty('type')) {
+      listType = flag['type'];
+    }
+    //
+    if (listType === 'list') {
+      seek = seek || 0;
+      let data = this._shareData.getAudioByIndex(seek);
+      this._shareData.playIndex = seek;
+      this._initAudioResource(data);
+    } else if (listType === 'next') {
+      const endIndex = this._shareData.nextQueueCount() - seek - 1;
+      const data = this._shareData.nextQueue[endIndex];
+      this._shareData.nextQueue = this._shareData.nextQueue.slice(0, endIndex);
+      this._initAudioResource(data);
+    } else if (listType === 'history') {
+
+    }
+  }
+
+  /**
+   *
+   * @param song
+   */
+  protected _initAudioResource(song: Song) {
+    this._shareData.progress = 0;
+    this._shareData.songDuration = song.dt;
+    this._shareData.isPlaying = false;
+    this._shareData.audioId = song.id;
+    if (this._avPlayer) {
+      this._avPlayer.reset().then(() => {
+        fetchSongUrl([song.id], 'standard').then((result) => {
+          if (result.length === 1) this._avPlayer.url = result[0].url;
         }).catch((err) => {
           console.log(`ERROR ${err}`);
-        })
+        });
       });
     }
   }
 
-  public getCurrSong(): SongModel {
-    const length = this.playList.length;
-    if (!length || this.playIndex > length - 1) return defaultSongItem;
-    else return this.playList[this.playIndex];
+  /**
+   *
+   * @returns
+   */
+  public getCurrSong(): Song {
+    return this._shareData.getCurrAudio();
   }
 
-
+  /**
+   *
+   * @param ms
+   */
   public seek(ms: number) {
-    if (this.isPrepare && this.avPlayerState != AvPlayState.ERROR) {
-      const finalTime = ms <= 0 ? 0 : (ms >= this.avPlayer.duration ? this.avPlayer.duration : ms);
-      if (this.avPlayer) this.avPlayer.seek(finalTime);
+    if (this._isPrepare && this._avPlayerState != AvPlayerState.ERROR) {
+      const finalTime = ms <= 0 ? 0 : (ms >= this._avPlayer.duration ? this._avPlayer.duration : ms);
+      if (this._avPlayer) this._avPlayer.seek(finalTime);
     }
   }
 
+  // prepared/paused/complete
   public async play() {
-    // 通过回调方式开始播放音视频资源，只能在prepared/paused/complete状态调用
-    if (this.avPlayer) {
-      if (this.avPlayer.state === 'idle') {
-        this.start(this.playList[this.playIndex].id);
+    if (this._avPlayer) {
+      if (this._avPlayerState === AvPlayerState.IDLE) {
+        this.start(this._shareData.playIndex);
       } else {
-        this.avPlayer.play();
-        AppStorage.SetOrCreate<boolean>('IS_PLAYING', true);
+        this._avPlayer.play().then(() => {
+          this._shareData.isPlaying = true;
+        });
       }
     }
   }
 
   public pause() {
-    // 通过回调方式暂停播放音视频资源，只能在playing状态调用
-    if (this.avPlayer && this.avPlayerState === AvPlayState.PLAYING) {
-      this.avPlayer.pause().then(() => {
-        this.avPlayerState = AvPlayState.PAUSED;
-        AppStorage.SetOrCreate<boolean>('IS_PLAYING', false);
+    if (this._avPlayer && this._avPlayerState === AvPlayerState.PLAYING) {
+      this._avPlayer.pause().then(() => {
+        this._shareData.isPlaying = false;
       })
     }
   }
 
-
-  // 注册avplayer回调函数
-  setAVPlayerCallback() {
-
-    if (!this.avPlayer) {
-      console.log(`AVPlayerError`);
-      return;
+  private handleAudioCompleted() {
+    switch (this._shareData.playMode) {
+      case AvPlayMode.ORDER:
+        if (this._shareData.playIndex < this._shareData.playlist.length - 1) {
+          this.start(this._shareData.playIndex + 1);
+        } else this._avPlayer.stop();
+        break;
+      case AvPlayMode.RANDOM:
+        break;
+      case AvPlayMode.SINGLE_CYCLE:
+        this._avPlayer.play();
+        break;
+      case AvPlayMode.LIST_CYCLE:
+        this.playNext();
+        break;
     }
+  }
 
-    this.avPlayer.on('seekDone', (seekDoneTime) => {
+  private setAVPlayerCallback() {
+    if (!this._avPlayer) return;
+
+    this._avPlayer.on('seekDone', (seekDoneTime) => {
       console.info(`AVPlayer seek succeeded, seek time is ${seekDoneTime}`);
-    })
+    });
 
-    this.avPlayer.on('error', (err) => {
-      console.error(`Invoke avPlayer failed, code is ${err.code}, message is ${err.message}`);
-      this.avPlayer.reset();
-    })
+    this._avPlayer.on('error', (err) => {
+      this._avPlayer.reset();
+      this._avPlayerState = AvPlayerState.ERROR;
+      console.error(`Invoke _avPlayer failed, code is ${err.code}, message is ${err.message}`);
+    });
 
-    this.avPlayer.on('durationUpdate', (duration) => {
-      AppStorage.SetOrCreate('DURATION', duration);
-    })
+    this._avPlayer.on('timeUpdate', (value) => {
+      this._shareData.progress = value;
+    });
 
-    this.avPlayer.on('timeUpdate', (value) => {
-      AppStorage.SetOrCreate('PROGRESS', value);
-    })
-
-    // 状态机变化回调函数
-    this.avPlayer.on('stateChange', async (state, reason) => {
+    this._avPlayer.on('stateChange', async (state, reason) => {
       switch (state) {
         case 'idle':
-          this.avPlayerState = AvPlayState.IDLE;
+          this._avPlayerState = AvPlayerState.IDLE;
           break;
         case 'initialized': // avplayer 设置播放源后触发该状态上报
-          this.avPlayer.prepare().then(() => {
-            this.isPrepare = true;
+          this._avPlayer.prepare().then(() => {
             console.info('AVPlayer prepare succeeded.');
+            this._isPrepare = true;
+            this._shareData.validDuration = this._avPlayer.duration;
           }, (err) => {
             console.log(`Invoke prepare failed, code is ${err.code}, message is ${err.message}`);
           });
-          this.avPlayerState = AvPlayState.INITIALIZED;
+          this._avPlayerState = AvPlayerState.INITIALIZED;
           break;
         case 'prepared':
-          AppStorage.SetOrCreate('DURATION', this.avPlayer.duration);
-          if (this.avPlayer) this.play();
-          this.avPlayerState = AvPlayState.PREPARED;
+          if (this._avPlayer) this.play();
+          this._avPlayerState = AvPlayerState.PREPARED;
           console.info('AVPlayer state prepared called.');
           break;
         case 'playing':
-          this.avPlayerState = AvPlayState.PLAYING;
-          console.info('AVPlayer state playing called.');
+          this._avPlayerState = AvPlayerState.PLAYING;
           break;
         case 'paused':
-          this.avPlayerState = AvPlayState.PAUSED;
-          console.info('AVPlayer state paused called.');
+          this._avPlayerState = AvPlayerState.PAUSED;
           break;
         case 'completed':
-          this.avPlayerState = AvPlayState.COMPLETED;
-          switch (this.playMode) {
-            case SongPlayMode.ORDER:
-              if (this.playIndex < this.playList.length - 1) {
-                this.start(this.playIndex + 1);
-              } else this.avPlayer.stop();
-              break;
-            case SongPlayMode.RANDOM:
-              break;
-            case SongPlayMode.SINGLE_CYCLE:
-              this.avPlayer.play();
-              break;
-            case SongPlayMode.LIST_CYCLE:
-              this.playNext();
-              break;
-          }
-          console.info('AVPlayer state completed called.');
+          this._avPlayerState = AvPlayerState.COMPLETED;
+          this.handleAudioCompleted();
           break;
         case 'stopped':
-          this.avPlayerState = AvPlayState.STOPPED;
-          console.info('AVPlayer state stopped called.');
-          this.avPlayer.reset();
+          this._avPlayerState = AvPlayerState.STOPPED;
+          this._avPlayer.reset();
           break;
         case 'released':
-          this.avPlayerState = AvPlayState.RELEASED;
-          console.info('AVPlayer state released called.');
+          this._avPlayerState = AvPlayerState.RELEASED;
           break;
         default:
           console.info('AVPlayer state unknown called.');
           break;
       }
     })
+  }
+
+  protected _getPreferences(callback: (prefs: preferences.Preferences) => void) {
+    const context: Context = AppStorage.Get('CONTEXT');
+    preferences.getPreferences(context, 'AUDIO_SERVICE', (err, _prefs: preferences.Preferences) => {
+      if (!err) callback(_prefs);
+      else {
+        console.log(`Preferences Error code: ${err.code}, message: ${err.message}`);
+      }
+    });
+  }
+
+  public loadCache() {
+    this._getPreferences((_prefs: preferences.Preferences) => {
+      _prefs.getAll((err, value: Object) => {
+        this._shareData.fromJson(value);
+        let audioIds: number[] = value['PLAYLIST'];
+        if (Array.isArray(audioIds)) {
+          fetchSongs(audioIds).then((res) => {
+            this._shareData.playlist = res.songs;
+          });
+        }
+      });
+    });
+  }
+
+  public saveCache() {
+    this._getPreferences(async (prefs: preferences.Preferences) => {
+      const value = this._shareData.toMap();
+      Object.keys(value).forEach(async (key: string) => {
+        if (key === 'PLAYLIST') {
+          let _playlist: number[] = (value[key] as Song[]).map((item) => item.id);
+          await prefs.put(key, _playlist);
+        } else {
+          await prefs.put(key, value[key]);
+        }
+      });
+      await prefs.flush();
+    });
   }
 }

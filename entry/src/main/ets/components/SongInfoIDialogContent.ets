@@ -1,6 +1,6 @@
 import router from '@ohos.router';
-import image from '@ohos.multimedia.image';
-import { ArtistModel, formatArtists, SongModel } from '../view_models/playlist_song_model'
+import { formatArtists } from '../view_models/playlist_song_model'
+import { Song } from '../models/SongModel';
 
 
 interface ListTitleValue {
@@ -11,8 +11,8 @@ interface ListTitleValue {
 }
 
 @CustomDialog
-export struct SongInfoDialogContent {
-  private data: SongModel | null = null;
+export struct SongInfoDialogComponent {
+  private data: Song | null = null;
   controller?: CustomDialogController
 
   @Builder ListTitle(value: ListTitleValue) {
@@ -23,7 +23,11 @@ export struct SongInfoDialogContent {
           Text(value.title).fontSize(18).fontColor('#E5000000');
           if (value.content) {
             Text(':').fontSize(18).fontColor('#E5000000');
-            Text(value.content).fontSize(18).fontColor('#E5000000');
+            Text(value.content)
+              .fontSize(18)
+              .fontColor('#E5000000')
+              .maxLines(1)
+              .textOverflow({ overflow: TextOverflow.Ellipsis });
           }
         }
         .height(63)
@@ -47,7 +51,7 @@ export struct SongInfoDialogContent {
         Text(this.data.name).padding(20).fontSize(24).fontWeight(FontWeight.Bold);
 
         this.ListTitle({
-          icon: $r('app.media.ic_device_earphone_filled'),
+          icon: $r('app.media.ic_public_user_line'),
           title: 'Artists',
           content: formatArtists(this.data.ar),
           onClick: () => {
@@ -56,7 +60,7 @@ export struct SongInfoDialogContent {
         });
 
         this.ListTitle({
-          icon: $r('app.media.album'),
+          icon: $r('app.media.ic_public_album_fill'),
           title: 'Album',
           content: this.data.al.name,
           onClick: () => {
@@ -65,15 +69,15 @@ export struct SongInfoDialogContent {
         });
 
         this.ListTitle({
-          icon: $r('app.media.ic_public_share_filled'),
+          icon: $r('app.media.ic_public_share_fill'),
           title: 'Share',
           onClick: () => {
 
           }
         });
 
-        this.ListTitle({ icon: $r('app.media.ic_public_play_next'), title: 'Play next' });
-        this.ListTitle({ icon: $r('app.media.ic_public_comments'), title: 'Comment' });
+        this.ListTitle({ icon: $r('app.media.ic_public_skip_forward_fill'), title: 'Play next' });
+        this.ListTitle({ icon: $r('app.media.ic_public_message_3_line'), title: 'Comment' });
       }
 
 

@@ -1,49 +1,48 @@
 import UIAbility from '@ohos.app.ability.UIAbility';
 import hilog from '@ohos.hilog';
 import window from '@ohos.window';
-import { SongPlayMode } from '../common/utils/AudioConfig';
+import { WindowsConstant } from '../common/constant/WindowConstant';
 import { AudioService } from '../common/utils/AudioService';
-import { StorageService } from '../common/utils/StorageService';
-import MyCustomDialog_ from '../mycustomdialog/MyCustomDialog';
-import { SongModel } from '../view_models/playlist_song_model';
-// import { SongPlayMode } from '../common/utils/AudioConfig';
-// import { AudioService } from '../common/utils/AudioService';
-// import { StorageService } from '../common/utils/StorageService';
-// import { defaultSongItem, SongModel } from '../view_models/playlist_song_model';
-// import { SongDataSource } from '../view_models/SongDataSource';
 
 export default class EntryAbility extends UIAbility {
-
   onCreate(want, launchParam) {
-    AppStorage.SetOrCreate('context', this.context);
-    this.loadCache();
+    AppStorage.SetOrCreate('CONTEXT', this.context);
+    AudioService.getInstance().loadCache();
+    window.getLastWindow(this.context).then((lastWindow) => {
+      const avoidArea: window.AvoidArea = lastWindow.getWindowAvoidArea(window.AvoidAreaType.TYPE_SYSTEM);
+      WindowsConstant.avoidArea = avoidArea;
+    })
+
     hilog.info(0x0000, 'testTag', '%{public}s', 'Ability onCreate');
   }
 
-  async loadCache() {
-    try {
-      // handle play model
-      const playMode = await StorageService.getInstance().get('PLAY_MODE', SongPlayMode.ORDER);
-      // handle playList
-      const playList = await StorageService.getInstance().get('PLAY_LIST', []);
-      let songs = JSON.parse(playList as string) as SongModel[];
-      // handle playIndex
-      const playIndex = await StorageService.getInstance().get('PLAY_INDEX', 0);
-      AudioService.getInstance().initData(songs, playIndex as number);
-    } catch (err) {
-
-    }
-  }
-
   onDestroy() {
+    AudioService.getInstance().saveCache();
     hilog.info(0x0000, 'testTag', '%{public}s', 'Ability onDestroy');
   }
 
   onWindowStageCreate(windowStage: window.WindowStage) {
     // Main window is created, set main page for this ability
     hilog.info(0x0000, 'testTag', '%{public}s', 'Ability onWindowStageCreate');
-
     AppStorage.SetOrCreate('WINDOW_STAGE', windowStage);
+    let windowClass = null;
+    windowStage.getMainWindow().then((data) => {
+      //
+      const { width, height } = data.getWindowProperties().windowRect;
+      AppStorage.SetOrCreate('WINDOW_WIDTH', width);
+      AppStorage.SetOrCreate('WINDOW_HEIGHT', height);
+
+      //
+      let names = [];
+      windowClass.setWindowSystemBarEnable(names, (err) => {
+        if (err.code) {
+          console.error('Failed to set the system bar to be visible. Cause:' + JSON.stringify(err));
+          return;
+        }
+        console.info('Succeeded in setting the system bar to be visible.');
+      });
+      windowClass = data;
+    })
 
     windowStage.loadContent('pages/Index', (err, data) => {
       if (err.code) {
@@ -66,6 +65,8 @@ export default class EntryAbility extends UIAbility {
   }
 
   onBackground() {
+    console.log('onBackground');
+    AudioService.getInstance().saveCache();
     // Ability has back to background
     hilog.info(0x0000, 'testTag', '%{public}s', 'Ability onBackground');
   }

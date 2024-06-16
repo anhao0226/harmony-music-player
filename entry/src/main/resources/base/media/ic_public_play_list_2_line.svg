@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+    <svg xmlns="http://www.w3.org/2000/svg" 
+        xmlns:xlink="http://www.w3.org/1999/xlink" 
+        width="24"
+        height="24"
+        viewBox="0 0 24 24"
+        version="1.1">
+        <title>Public/play-list-2-line</title>
+        <defs>
+            <path
+                d="M22 18V20H2V18H22ZM2 3.5L10 8.5L2 13.5V3.5ZM22 11V13H12V11H22ZM4 7.1085V9.8915L6.22641 8.5L4 7.1085ZM22 4V6H12V4H22Z"
+                id="_path-1"/>
+        </defs>
+        <g
+            id="_Public/play-list-2-line"
+            stroke="none"
+            stroke-width="1"
+            fill="none"
+            fill-rule="evenodd">
+            <mask
+                id="_mask-2"
+                fill="white">
+                <use xlink:href="#_path-1"/>
+            </mask>
+            <use
+                id="_形状结合"
+                fill="#000000"
+                fill-rule="nonzero"
+                xlink:href="#_path-1"/>
+        </g>
+    </svg>

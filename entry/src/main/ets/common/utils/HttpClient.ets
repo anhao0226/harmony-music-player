@@ -27,7 +27,7 @@ export async function httpRequestGet<T>(url: string, options?: Option): Promise<
   // handle request url
   let finalUrl = baseUrl.concat(url);
 
-  if(options && options.queryParams){
+  if (options && options.queryParams) {
     finalUrl = finalUrl + transformQueryParameters(options.queryParams);
   }
 
@@ -39,17 +39,27 @@ export async function httpRequestGet<T>(url: string, options?: Option): Promise<
     extraData: {}
   };
 
-  try {
-    const responseResult = await httpRequest.request(encodeURI(finalUrl), requestOptions)
-    if (responseResult.responseCode === Const.HTTP_CODE_200) {
-      return JSON.parse(responseResult.result as string) as T;
-    } else {
-      return;
-    }
-  } catch (err) {
-    console.log("Error: " + JSON.stringify(err))
-    return err;
-  }
+  return new Promise((resolve, reject) => {
+    httpRequest.request(encodeURI(finalUrl), requestOptions, (err, data: http.HttpResponse) => {
+      if (!err) {
+        // data.result为HTTP响应内容，可根据业务需要进行解析
+        console.info('Result:' + JSON.stringify(data.result));
+        console.info('code:' + JSON.stringify(data.responseCode));
+        // data.header为HTTP响应头，可根据业务需要进行解析
+        console.info('header:' + JSON.stringify(data.header));
+        console.info('cookies:' + JSON.stringify(data.cookies));
+        // 处理响应内容
+        let result = JSON.parse(data.result as string) as T;
+        resolve(result);
+      } else {
+        console.log('')
+        reject(err);
+      }
+
+      // 当该请求使用完毕时，调用destroy方法主动销毁
+      httpRequest.destroy();
+    })
+  })
 }
 
 

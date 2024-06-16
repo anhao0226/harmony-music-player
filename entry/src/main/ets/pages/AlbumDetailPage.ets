@@ -1,13 +1,16 @@
 import router from '@ohos.router';
 
 import { SongModel, defaultSongItem, } from '../view_models/playlist_song_model';
-import { AudioService } from '../common/utils/AudioService';
-import { PlayControlComponent } from '../components/PlayControlComponent';
-import { getImageMainColor, getNetworkImagePixelMap, rgbaToHexColor } from '../common/utils/ColorUtil';
-import { SongItemComponent } from '../components/SongItem';
-import { SongInfoDialogContent } from '../components/SongInfoIDialogContent';
-import { ArtistAlbumModel, ArtistDetailModel, fetchAlbumDetail, } from '../view_models/ArtistDetailModel';
-import { SplitLayout } from '../components/SplitLayout';
+import { BottomBarControlComponent } from '../components/BottomBarControlComponent';
+import { SongInfoDialogComponent } from '../components/SongInfoIDialogContent';
+import { ArtistAlbumModel, } from '../view_models/ArtistDetailModel';
+import { CommonLayoutLComponent, CommonLayoutRComponent } from '../components/CommonPageLayoutComponent';
+import { SongListComponent } from '../components/SongListComponent';
+import { SongDataSource } from '../view_models/SongDataSource';
+import { CommonDataSource } from '../models/CommonDataSource';
+import { Song } from '../models/SongModel';
+import { fetchAlbumDetail } from '../api/SongApi';
+import { Album } from '../models/AlbumDetailModel';
 
 
 @Entry
@@ -19,79 +22,57 @@ struct AlbumDetailPage {
   @State leftBgColor: string = '#B6C5D1';
   @State trackCount: number = 0;
   @State dialogData: SongModel | null = null;
-  @State songs: SongModel[] = [];
   @State album: ArtistAlbumModel | null = null;
-  songInfoDialogController: CustomDialogController = new CustomDialogController({
+  @State _album: Album = null;
+  private _songs: CommonDataSource<Song> = new CommonDataSource<Song>();
+  private _dialogData: Song | null = null;
+  private songInfoDialogController: CustomDialogController = new CustomDialogController({
     alignment: DialogAlignment.Center,
-    builder: SongInfoDialogContent({ data: this.dialogData })
+    builder: SongInfoDialogComponent({ data: this._dialogData })
   })
 
   onPageShow() {
     const params = router.getParams();
-    const albumId = params['albumId'];
-    console.log(albumId.toString());
+    const albumId = (params && params.hasOwnProperty('albumId')) ? params['albumId'] : '';
     this.initData(albumId);
   }
 
   initData(albumId: number) {
-    fetchAlbumDetail(albumId).then(async (data) => {
-      this.album = data.album;
-      this.songs = data.songs;
-      this.updateLeftBackgroundColor(data.album.picUrl);
+    fetchAlbumDetail(albumId).then((res) => {
+      this._album = res.album;
+      this._songs.pushDataFromArray(res.songs);
     })
   }
 
-  async updateLeftBackgroundColor(url: string) {
-    try {
-      const pixelMap = await getNetworkImagePixelMap(url);
-      const mainColor = await getImageMainColor(pixelMap);
-      this.leftBgColor = rgbaToHexColor(mainColor);
-    } catch (err) {
-      console.log(err);
+  @Builder BodyBuilder() {
+    Column() {
+      SongListComponent({
+        songList: this._songs,
+        songCount: this.album ? this.album.size : 0,
+      });
     }
+    .padding({ left: 12, right: 12 })
+    .backgroundColor('#FFFFFF')
+    .borderRadius({ topLeft: 14, topRight: 14 })
+    .layoutWeight(1);
   }
 
   build() {
     Column() {
       Row() {
-        // LEFT
-        SplitLayout({ pos: 'left', bgColor: this.leftBgColor }) {
-          if (this.album) {
-            Column({ space: 16 }) {
-              Image(this.album.picUrl)
-                .backgroundColor(Color.Gray)
-                .width('100%')
-                .aspectRatio(1)
-                .borderRadius(14)
-                .margin({ top: 12 })
-                .animation({ curve: Curve.EaseIn })
-                .clip(true);
+        CommonLayoutLComponent({
+          imgSrc: this._album ? this._album.picUrl : '',
+          name: this._album ? this._album.name : '',
+          description: this._album ? this._album.description : ''
+        });
 
-              Text(this.album.name).fontSize(22).fontColor('#FFFFFF');
-
-              Text(this.album.description).fontSize(15).fontColor('#99FFFFFF')
-                .textOverflow({ overflow: TextOverflow.Ellipsis })
-                .maxLines(4);
-
-            }.width('66%').alignItems(HorizontalAlign.Start);
-          }
-        }
-        // RIGHT
-        SplitLayout({ pos: 'right', bgColor: this.leftBgColor }) {
-          if (this.songs.length > 0) {
-            Column() {
-              SongsComponent({ hotSongs: this.songs, album: this.album });
-            }
-            .padding({ left: 12, right: 12 })
-            .backgroundColor('#FFFFFF')
-            .borderRadius({ topLeft: 14, topRight: 14 })
-            .layoutWeight(1);
-          }
-        }
+        CommonLayoutRComponent({
+          bodyBuilder: this.BodyBuilder.bind(this),
+        });
       }.width('100%').layoutWeight(1);
 
       //
-      PlayControlComponent().key(this.TAG);
+      BottomBarControlComponent().key(this.TAG);
 
     }.height('100%').width('100%').backgroundColor('#F1F3F5');
   }
@@ -101,47 +82,6 @@ struct AlbumDetailPage {
     PageTransitionExit({ duration: 425, curve: Curve.EaseInOut, type: RouteType.Push });
   }
 }
-
-@Component
-struct SongsComponent {
-  private album: ArtistAlbumModel;
-  private hotSongs: SongModel[] = [];
-
-  handleItemClick(item: SongModel, index: number): void {
-    AudioService.getInstance().initData(this.hotSongs.slice(index));
-    AudioService.getInstance().start();
-    router.pushUrl({ url: 'pages/SongPlayerPage', params: { songId: item.id } });
-  }
-
-  build() {
-    Column() {
-      Row({ space: 12 }) {
-        Image($r('app.media.ic_public_play_norm'))
-          .width(28)
-          .fillColor('#E84026');
-        Text(`Play all (${this.album.size})`)
-          .fontSize(16)
-          .fontWeight(FontWeight.Bold);
-      }.height(66).width('100%').padding({ left: 10 });
-
-      List() {
-        ForEach(this.hotSongs, (item: SongModel, index: number) => {
-          ListItem() {
-            SongItemComponent({ data: item });
-          }.onClick(() => this.handleItemClick(item, index)).width('100%').align(Alignment.Start);
-
-        }, (item: SongModel, _) => item.id.toString());
-
-      }
-      .lanes(2)
-      .height(0)
-      .width('100%')
-      .layoutWeight(1)
-      .divider({ strokeWidth: 1, startMargin: 12, color: '#ffe9f0f0' });
-    }
-  }
-}
-
 
 
 

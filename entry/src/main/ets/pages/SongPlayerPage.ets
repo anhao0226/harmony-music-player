@@ -1,200 +1,202 @@
-import {
-  getImageMainColor,
-  rgbaToHexColor,
-  getDarkColor,
-  getNetworkImagePixelMap
-} from '../common/utils/ColorUtil';
-import { defaultSongItem, formatArtists, SongModel } from '../view_models/playlist_song_model';
-import wantAgent from '@ohos.app.ability.wantAgent';
-import { WantAgent } from '@ohos.wantAgent';
-import backgroundTaskManager from '@ohos.resourceschedule.backgroundTaskManager';
+import { rgbaToHexColor } from '../common/utils/ColorUtil';
+import { formatArtists } from '../view_models/playlist_song_model';
 import notificationManager from '@ohos.notificationManager';
 import { AudioService } from '../common/utils/AudioService';
-import emitter from '@ohos.events.emitter';
-import { SongListCustomDialog } from '../components/SongListCustomDialog';
-import { EventId, SongPlayMode } from '../common/utils/AudioConfig';
-import { PlayerProgressBar } from '../components/PlayerProgressBar';
-import { SongInfoDialogContent } from '../components/SongInfoIDialogContent';
+import { SongInfoDialogComponent } from '../components/SongInfoIDialogContent';
+import { LyricComponent } from '../components/LyricComponent';
+import { AudioControlComponent, ControlEventType, ControlIcons } from '../components/AudioControlComponent';
+import { fetchSongs } from '../api/SongApi';
+import router from '@ohos.router';
+import { AlbumComponent } from '../components/AlbumComponent';
+import { Song } from '../models/SongModel';
+import { FromRouterValue, PlaylistDialogComponent } from '../components/PlaylistDialogComponent';
+import { IconComponent } from '../components/IconComponent';
+import { CommentType } from '../api/CommentApi';
+import effectKit from '@ohos.effectKit';
 
 
-let localStorage = new LocalStorage({ 'PropA': 47 });
+const storage = new LocalStorage({
+  'SONG_ID': 0,
+  'SONG_DURATION': 0,
+  'MAIN_COLOR': '#B6C5D1',
+});
 
-@Entry(localStorage)
+@Entry(storage)
 @Component
 struct SongPlayerPage {
-  @State bgColor: string = '#B6C5D1';
+  private readonly TAG: string = 'SONG_PLAYER_PAGE';
+  private _fromRouterValue: FromRouterValue = null;
   @State defaultColor: string = "#FFFFFF";
   @State playIconColor: string = '#77FFFFFF';
-  @State sliderSelectedColor: string = '#77FFFFFF';
-  @State context: Context = getContext(this);
-  @State imageData: Resource | PixelMap = $r('app.media.ic_device_earphone_filled');
-  @State songItem: SongModel = defaultSongItem;
-  @State songPlayMode: SongPlayMode = SongPlayMode.ORDER;
-  @State playModeIconResource: Resource = $r('app.media.ic_public_order_play');
-  //
-  @StorageProp('IS_PLAYING') isPlay: boolean = false;
-  @StorageProp('CURR_AUDIO_ID') @Watch('onCurrAudioChange') currAudioId: number = 0;
-  // //
-  dialogController: CustomDialogController = new CustomDialogController({
-    alignment: DialogAlignment.Bottom,
-    builder: SongListCustomDialog({
-      songs: AudioService.getInstance().playlist(),
-      onItemClick: (_, index) => {
-        AudioService.getInstance().start(index);
-      }
-    }),
-  })
-  songInfoDialogController: CustomDialogController = new CustomDialogController({
+  @State _albumImageSrc: string = '';
+  @State _songName: string = 'Unknown';
+  @State _artistsText: string = 'unknown';
+  @State _mainColor: string = '#A6C2BE';
+  @State _leftWidth: number = 0;
+  @StorageProp('AUDIO_ID') @Watch('onAudioChange') _audioId: number = 0;
+
+  /**
+   * songInfoDialogController
+   */
+  private songInfoDialogController: CustomDialogController = new CustomDialogController({
+    gridCount: 5,
     alignment: DialogAlignment.Center,
-    builder: SongInfoDialogContent({ data: AudioService.getInstance().getCurrSong() })
-  })
+    builder: SongInfoDialogComponent({
+      data: AudioService.getInstance().getCurrSong(),
+    })
+  });
+
+  /**
+   * playlistDialogController
+   */
+  private playlistDialogController: CustomDialogController = new CustomDialogController({
+    gridCount: 7,
+    customStyle: true,
+    alignment: DialogAlignment.Bottom,
+    builder: PlaylistDialogComponent({
+      bgColor: this._mainColor,
+      fromRouterValue: this._fromRouterValue,
+      history: AudioService.getInstance().history(),
+      playlist: AudioService.getInstance().playlist(),
+      nextPlaylist: AudioService.getInstance().nextPlaylist(),
+      onSongItemClick: (value: Song, index: number, flag: Object) => {
+        AudioService.getInstance().start(index, flag);
+      },
+    }),
+  });
 
   onPageShow() {
-    this.initData(AudioService.getInstance().getCurrSong());
-    emitter.on({ eventId: EventId.CHANGE_SONG }, async (data: emitter.EventData) => {
-      this.initData(JSON.parse(data.data['song']));
-    })
+    let songId: number = this._audioId;
+    const params = router.getParams();
+    if (params) {
+      if (params.hasOwnProperty('songId')) {
+        songId = params['songId']
+      }
+      if (params.hasOwnProperty('from') && params['from']) {
+        this._fromRouterValue = params['from'];
+      }
+    }
 
+    this.initData(songId);
   }
 
-  onPageHide() {
-    emitter.off(EventId.CHANGE_SONG);
+  onAudioChange() {
+    this.initData(this._audioId);
   }
 
-  async initData(song: SongModel) {
-    this.songItem = song;
-    this.imageData = await getNetworkImagePixelMap(song.al.picUrl);
-    const mainColor = await getImageMainColor(this.imageData)
-    this.bgColor = rgbaToHexColor(mainColor);
-    this.sliderSelectedColor = rgbaToHexColor(getDarkColor(mainColor, 0.2));
-  }
-
-  formatTime(value: number): string {
-    const toSecond = value / 1000;
-    return `${this.fillZero(toSecond / 60)}:${this.fillZero(toSecond % 60)}`;
-  }
-
-  fillZero(value: number): string {
-    return value < 10 ? `0${parseInt(value.toString())}` : `${parseInt(value.toString())}`;
-  }
-
-  onCurrAudioChange() {
-
+  async initData(songId: number) {
+    fetchSongs([songId]).then((result) => {
+      const { songs } = result;
+      if (songs.length > 0) {
+        const song = songs[0];
+        this._songName = song.name;
+        this._artistsText = formatArtists(song.ar);
+        this._albumImageSrc = song.al.picUrl;
+      }
+    });
   }
 
   @Builder NavTitle() {
     Row() {
+      Row() {
+        IconComponent({
+          iconColor: '#99FFFFFF',
+          resource: $r('app.media.ic_public_arrow_left_line'),
+          onTap: () => router.back()
+        });
+      }.padding({ left: 24 });
       Column({ space: 6 }) {
-        Text(this.songItem.id > 0 ? this.songItem.name : "Unknown")
+        Text(this._songName)
           .fontSize(24)
           .fontWeight(FontWeight.Bold)
           .fontColor(this.defaultColor);
 
-        Text(formatArtists(this.songItem.ar)).fontColor(this.defaultColor).onClick(() => {
-          this.songInfoDialogController.open();
-        })
+        Text(this._artistsText)
+          .fontColor(this.defaultColor)
+          .onClick(() => {
+            this.songInfoDialogController.open();
+          })
+      }.alignSelf(ItemAlign.End).layoutWeight(1);
 
-
-      }.alignSelf(ItemAlign.End)
+      Row() {
+        IconComponent({
+          iconColor: '#99FFFFFF',
+          resource: $r('app.media.ic_public_message_3_line'),
+          onTap: () => {
+            router.pushUrl({ url: 'pages/Comments', params: { id: this._audioId, type: CommentType.MUSIC } });
+          }
+        });
+        IconComponent({
+          iconColor: '#99FFFFFF',
+          resource: $r('app.media.ic_public_album_fill'),
+          onTap: () => {
+          }
+        });
+      }.padding({ right: 24 });
     }
-    // .backgroundColor(Color.Red)
     .width('100%')
     .height('100%')
-    .justifyContent(FlexAlign.SpaceAround);
-  }
-
-  @Builder SongPlayModeUI() {
-    Image(this.playModeIconResource)
-      .width(40)
-      .height(40)
-      .fillColor(this.defaultColor)
-      .padding(6)
-      .onClick(() => this.handlePlayModeChange())
+    .alignItems(VerticalAlign.Bottom)
   }
 
   build() {
-    Navigation() {
+    Column() {
       Column() {
+        Column() {
+          this.NavTitle();
+        }.height(106).width('100%');
 
-        Row() {
-          if (this.songItem.id > 0) {
-            Image(this.songItem.al.picUrl)
-              .width(320)
-              .height(320)
-              .borderRadius(160)
-              .borderColor(this.sliderSelectedColor);
-          } else {
-            Image($r('app.media.ic_device_earphone_filled'))
-              .width(320)
-              .height(320);
-          }
-        }.layoutWeight(1);
-
-        Column({ space: 20 }) {
-          PlayerProgressBar({
-            fontColor: this.defaultColor,
-            selectedColor: this.sliderSelectedColor
-          }).width('80%').height(40);
+        Column() {
           //
-          Row({ space: 50 }) {
-            this.SongPlayModeUI();
-
-            Image($r('app.media.ic_public_play_last'))
-              .width(30)
-              .onClick(() => {
-                AudioService.getInstance().playPrevious()
-              })
-              .width(50)
-              .padding(10)
-              .borderRadius(25)
-              .fillColor(this.defaultColor)
-              .backgroundColor('#33FFFFFF');
-
-            Image(this.isPlay ? $r('app.media.ic_public_pause') : $r('app.media.ic_public_play'))
-              .animation({ duration: 300, curve: Curve.Linear })
-              .onClick(() => {
-                if (this.isPlay) {
-                  AudioService.getInstance().pause();
-                } else {
-                  AudioService.getInstance().play();
+          Row({}) {
+            /**
+             * left
+             */
+            Column() {
+              AlbumComponent({
+                src: this._albumImageSrc,
+                getMainColor: (color: effectKit.Color) => {
+                  const hexColor = rgbaToHexColor(color);
+                  this._mainColor = hexColor;
                 }
-              })
-              .width(70)
-              .padding(12)
-              .borderRadius(35)
-              .fillColor(this.defaultColor)
-              .backgroundColor('#33FFFFFF');
+              }).width('100%');
+            }
+            .width('50%')
+            .height('100%')
+            .onAreaChange((_, newVal: Area) => {
+              this._leftWidth = newVal.width as number;
+            }).justifyContent(FlexAlign.SpaceAround);
 
-            Image($r('app.media.ic_public_play_next'))
-              .width(50)
-              .padding(10)
-              .borderRadius(30)
-              .fillColor(this.defaultColor)
-              .backgroundColor('#33FFFFFF')
-              .onClick(() => {
-                AudioService.getInstance().playNext();
-              });
+            /**
+             * right
+             */
+            Row() {
+              LyricComponent().height(320);
+            }.width('50%').height('100%');
 
-            Image($r('app.media.ic_public_drawer'))
-              .width(30)
-              .fillColor(this.defaultColor)
-              .onClick(() => {
-                this.dialogController.open();
-              });
-          }
-        }
-        .height(200)
-        .justifyContent(FlexAlign.Center)
 
+          }.layoutWeight(1).width('100%');
+          /**
+           * AudioControlComponent
+           */
+          AudioControlComponent({
+            icons: ControlIcons,
+            onItemClick: (value) => {
+              if (value === ControlEventType.PLAY_LIST) {
+                this.playlistDialogController.open();
+              }
+            }
+          }).margin({ bottom: 40 });
+
+
+        }.layoutWeight(1).width('84%');
       }
-      .height('100%')
       .width('100%')
-    }
-    .title(this.NavTitle())
-    .titleMode(NavigationTitleMode.Free)
-    .navBarWidth('100%')
-    .backgroundColor(this.bgColor)
-    .animation({ duration: 300, curve: Curve.Linear });
+      .height('100%')
+      .backgroundColor(this._mainColor)
+      .animation({ duration: 625, curve: Curve.EaseIn })
+      .justifyContent(FlexAlign.Center);
+    }.backgroundColor('#A6C2BE');
   }
 
   pageTransition() {
@@ -212,43 +214,40 @@ struct SongPlayerPage {
     });
 
   }
+}
 
-  handlePlayModeChange() {
-    const resource = [$r('app.media.ic_public_order_play'), $r('app.media.ic_public_random'), $r('app.media.ic_public_single_cycle'), $r('app.media.ic_public_list_cycle')];
-    const modeArr = [SongPlayMode.ORDER, SongPlayMode.RANDOM, SongPlayMode.SINGLE_CYCLE, SongPlayMode.LIST_CYCLE];
-    let index = AudioService.getInstance().getPlayMode() + 1;
-    if (index > modeArr.length - 1) index = 0;
-    this.songPlayMode = modeArr[index];
-    this.playModeIconResource = resource[index];
-    AudioService.getInstance().updatePlayMode(this.songPlayMode);
-  }
+@Component
+struct _SongDetailDialogComponent {
+  build() {
 
-  startContinuousTask() {
-    let wantAgentInfo: wantAgent.WantAgentInfo = {
-      wants: [{
-        bundleName: 'com.example.netease_cloud_music',
-        abilityName: 'com.example.netease_cloud_music.EntryAbility',
-      }],
-      operationType: wantAgent.OperationType.START_ABILITY,
-      requestCode: 0,
-      wantAgentFlags: [wantAgent.WantAgentFlags.UPDATE_PRESENT_FLAG]
-    }
-
-    wantAgent.getWantAgent(wantAgentInfo).then((wantAgentObj: WantAgent) => {
-      backgroundTaskManager.startBackgroundRunning(this.context, backgroundTaskManager.BackgroundMode.AUDIO_PLAYBACK, wantAgentObj)
-        .then(() => {
-          console.info(`Succeeded in operationing startBackgroundRunning.`);
-        }).catch((err) => {
-        console.error(`Failed to operation startBackgroundRunning. Code is ${err.code}, message is ${err.message}`);
-      })
-    })
-  }
-
-  stopContinuousTask() {
-    backgroundTaskManager.stopBackgroundRunning(this.context).then(() => {
-      console.info(`Succeeded in operationing stopBackgroundRunning.`);
-    }).catch((err) => {
-      console.error(`Failed to operation stopBackgroundRunning. Code is ${err.code}, message is ${err.message}`);
-    });
   }
 }
+
+// startContinuousTask() {
+//   let wantAgentInfo: wantAgent.WantAgentInfo = {
+//     wants: [{
+//       bundleName: 'com.example.netease_cloud_music',
+//       abilityName: 'com.example.netease_cloud_music.EntryAbility',
+//     }],
+//     operationType: wantAgent.OperationType.START_ABILITY,
+//     requestCode: 0,
+//     wantAgentFlags: [wantAgent.WantAgentFlags.UPDATE_PRESENT_FLAG]
+//   }
+//
+//   wantAgent.getWantAgent(wantAgentInfo).then((wantAgentObj: WantAgent) => {
+//     backgroundTaskManager.startBackgroundRunning(this.context, backgroundTaskManager.BackgroundMode.AUDIO_PLAYBACK, wantAgentObj)
+//       .then(() => {
+//         console.info(`Succeeded in operationing startBackgroundRunning.`);
+//       }).catch((err) => {
+//       console.error(`Failed to operation startBackgroundRunning. Code is ${err.code}, message is ${err.message}`);
+//     })
+//   })
+// }
+//
+// stopContinuousTask() {
+//   backgroundTaskManager.stopBackgroundRunning(this.context).then(() => {
+//     console.info(`Succeeded in operationing stopBackgroundRunning.`);
+//   }).catch((err) => {
+//     console.error(`Failed to operation stopBackgroundRunning. Code is ${err.code}, message is ${err.message}`);
+//   });
+// }

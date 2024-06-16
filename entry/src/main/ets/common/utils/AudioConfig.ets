@@ -1,15 +1,11 @@
+/**
+ *
+ */
 export enum EventId {
   CHANGE_SONG = 0,
 }
 
-export enum SongPlayMode {
-  ORDER,
-  RANDOM,
-  SINGLE_CYCLE,
-  LIST_CYCLE
-}
-
-export enum AvPlayState {
+export enum AvPlayerState {
   IDLE,
   INITIALIZED,
   PREPARED,
@@ -21,3 +17,12 @@ export enum AvPlayState {
   ERROR,
   LOADING,
 }
+
+export enum AvPlayMode {
+  ORDER,
+  RANDOM,
+  SINGLE_CYCLE,
+  LIST_CYCLE
+}
+
+export const PlayModeArray = [AvPlayMode.ORDER, AvPlayMode.RANDOM, AvPlayMode.SINGLE_CYCLE, AvPlayMode.LIST_CYCLE];

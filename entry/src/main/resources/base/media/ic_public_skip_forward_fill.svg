@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+    <svg xmlns="http://www.w3.org/2000/svg" 
+        xmlns:xlink="http://www.w3.org/1999/xlink" 
+        width="24"
+        height="24"
+        viewBox="0 0 24 24"
+        version="1.1">
+        <title>Public/skip-forward-fill</title>
+        <defs>
+            <path
+                d="M16 12.6667L5.77735 19.4818C5.54759 19.6349 5.23715 19.5729 5.08397 19.3431C5.02922 19.261 5 19.1645 5 19.0657V4.93426C5 4.65812 5.22386 4.43426 5.5 4.43426C5.59871 4.43426 5.69522 4.46348 5.77735 4.51823L16 11.3333V5C16 4.44772 16.4477 4 17 4C17.5523 4 18 4.44772 18 5V19C18 19.5523 17.5523 20 17 20C16.4477 20 16 19.5523 16 19V12.6667Z"
+                id="_path-1"/>
+        </defs>
+        <g
+            id="_Public/skip-forward-fill"
+            stroke="none"
+            stroke-width="1"
+            fill="none"
+            fill-rule="evenodd">
+            <mask
+                id="_mask-2"
+                fill="white">
+                <use xlink:href="#_path-1"/>
+            </mask>
+            <use
+                id="_形状结合"
+                fill="#000000"
+                fill-rule="nonzero"
+                xlink:href="#_path-1"/>
+        </g>
+    </svg>

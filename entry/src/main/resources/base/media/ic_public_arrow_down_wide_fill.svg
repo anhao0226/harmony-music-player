@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+    <svg xmlns="http://www.w3.org/2000/svg" 
+        xmlns:xlink="http://www.w3.org/1999/xlink" 
+        width="24"
+        height="24"
+        viewBox="0 0 24 24"
+        version="1.1">
+        <title>Public/arrow-down-wide-fill</title>
+        <defs>
+            <path
+                d="M12 15.6315L20.9679 10.8838L20.0321 9.11619L12 13.3685L3.96788 9.11619L3.0321 10.8838L12 15.6315Z"
+                id="_path-1"/>
+        </defs>
+        <g
+            id="_Public/arrow-down-wide-fill"
+            stroke="none"
+            stroke-width="1"
+            fill="none"
+            fill-rule="evenodd">
+            <mask
+                id="_mask-2"
+                fill="white">
+                <use xlink:href="#_path-1"/>
+            </mask>
+            <use
+                id="_形状结合"
+                fill="#000000"
+                fill-rule="nonzero"
+                xlink:href="#_path-1"/>
+        </g>
+    </svg>

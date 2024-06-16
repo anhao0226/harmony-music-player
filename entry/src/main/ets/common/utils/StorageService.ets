@@ -1,5 +1,25 @@
 import preferences from '@ohos.data.preferences'
-
+//
+// class _AppStorage extends AppStorage {
+//   static _context: Context = AppStorage.Get('context');
+//
+//   constructor() {
+//     super();
+//   }
+//
+//   static _saveValue<T extends preferences.ValueType>(propName: string, newValue: T) {
+//     preferences.getPreferences(this._context, 'STORAGE_SERVICE', (err, pref: preferences.Preferences) => {
+//       if (!err) {
+//         pref.put(propName, newValue, () => pref.flush());
+//       }
+//     })
+//   }
+//
+//   static SetAndSave<T extends preferences.ValueType>(propName: string, newValue: T) {
+//     AppStorage.SetOrCreate(propName, newValue);
+//     this._saveValue(propName, newValue);
+//   }
+// }
 
 export class StorageService {
   static getInstance() {
@@ -12,7 +32,7 @@ export class StorageService {
   }
 
   private getPreferences(): Promise<preferences.Preferences> {
-    return preferences.getPreferences(AppStorage.Get('context') as Context, "StorageService");
+    return preferences.getPreferences(AppStorage.Get('CONTEXT') as Context, "StorageService");
   }
 
   public async put(key: string, value: preferences.ValueType) {

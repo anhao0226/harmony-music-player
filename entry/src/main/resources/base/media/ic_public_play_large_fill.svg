@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+    <svg xmlns="http://www.w3.org/2000/svg" 
+        xmlns:xlink="http://www.w3.org/1999/xlink" 
+        width="24"
+        height="24"
+        viewBox="0 0 24 24"
+        version="1.1">
+        <title>Public/play-large-fill</title>
+        <defs>
+            <path
+                d="M6 20.1957V3.80421C6 3.01878 6.86395 2.53993 7.53 2.95621L20.6432 11.152C21.2699 11.5436 21.2699 12.4563 20.6432 12.848L7.53 21.0437C6.86395 21.46 6 20.9812 6 20.1957Z"
+                id="_path-1"/>
+        </defs>
+        <g
+            id="_Public/play-large-fill"
+            stroke="none"
+            stroke-width="1"
+            fill="none"
+            fill-rule="evenodd">
+            <mask
+                id="_mask-2"
+                fill="white">
+                <use xlink:href="#_path-1"/>
+            </mask>
+            <use
+                id="_形状结合"
+                fill="#000000"
+                fill-rule="nonzero"
+                xlink:href="#_path-1"/>
+        </g>
+    </svg>
