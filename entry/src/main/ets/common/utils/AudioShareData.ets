@@ -1,20 +1,33 @@
-import { AvPlayMode } from './AudioConfig';
+import { DataSource } from '../../models/DataSource';
+import { AvPlayMode, PlayModeArray } from './AudioConfig';
 
-interface ShareDataInterface {
-  id: number;
-}
+export enum ListType { Play, Next, History }
 
-export class AudioShareData<T extends ShareDataInterface> {
-  // 当前播放音频id
-  protected _audioId: number = 0;
+export class AudioShareData<T> {
+  //
+  public playlist: DataSource<T> = new DataSource<T>();
+  //
+  public nextPlaylist: DataSource<T> = new DataSource<T>(true);
+  //
+  public history: DataSource<T> = new DataSource<T>();
 
-  get audioId(): number {
-    return this._audioId;
+  //
+  protected _currAudio: T = null;
+
+  set currAudio(value: T) {
+    this._currAudio = value;
   }
 
-  set audioId(value: number) {
-    AppStorage.SetOrCreate('AUDIO_ID', value);
-    this._audioId = value;
+  //
+  protected _currAudioId: number = 0;
+
+  get currAudioId() {
+    return this._currAudioId;
+  }
+
+  set currAudioId(value: number) {
+    AppStorage.SetOrCreate('CURRENT_AUDIO_ID', value);
+    this._currAudioId = value;
   }
 
   // 播放进度
@@ -42,61 +55,28 @@ export class AudioShareData<T extends ShareDataInterface> {
   }
 
   // 播放的下标
-  private _playIndex: number = 0;
+  private _currPlayIndex: number = 0;
 
-  get playIndex(): number {
-    return this._playIndex;
+  get currPlayIndex(): number {
+    return this._currPlayIndex;
   }
 
-  set playIndex(value: number) {
-    this._playIndex = value;
+  set currPlayIndex(value: number) {
+    this._currPlayIndex = value;
   }
 
-  nextIndex(): number {
-    const curr = this._playIndex + 1;
-    return curr >= this._playlist.length ? 0 : curr;
+  nextPlayIndex(): number {
+    const totalCount: number = this.playlist.totalCount();
+    return this.currPlayIndex + 1 < totalCount ? this.currPlayIndex + 1 : 0;
   }
 
-  prevIndex() {
-    const curr = this._playIndex - 1;
-    return curr > 0 ? curr : this._playlist.length - 1;
+  prevPlayIndex(): number {
+    const totalCount: number = this.playlist.totalCount();
+    return this.currPlayIndex - 1 > 0 ? this.currPlayIndex - 1 : totalCount - 1;
   }
 
-  // 历史播放记录
-  protected _history: T[];
-
-  set history(value: T[]) {
-    this._history = value;
-  }
-
-  get history(): T[] | null {
-    return this._history
-  }
-
-  // 播放列表
-  private _playlist: T[] = [];
-
-  get playlist(): T[] {
-    return this._playlist;
-  }
-
-  set playlist(value: T[]) {
-    this._playlist = value;
-  }
-
-  getCurrAudio(): T | null {
-    let length: number = this._playlist.length;
-    if (length && this._playIndex < length) {
-      return this._playlist[this._playIndex];
-    }
-    return null;
-  }
-
-  getAudioByIndex(index: number): T | null {
-    if (index < this._playlist.length && index >= 0) {
-      return this._playlist[index];
-    }
-    return null;
+  currAudioData(): T {
+    return this._currAudio;
   }
 
   // 播放状态
@@ -112,7 +92,7 @@ export class AudioShareData<T extends ShareDataInterface> {
   }
 
   // 播放模式
-  private _playMode: AvPlayMode = AvPlayMode.ORDER;
+  protected _playMode: AvPlayMode = AvPlayMode.ORDER;
 
   get playMode(): AvPlayMode {
     return this._playMode;
@@ -135,41 +115,24 @@ export class AudioShareData<T extends ShareDataInterface> {
     this._validDuration = value;
   }
 
-  // 存储待播放的列表
-  protected _nextQueue: T[] = null;
-
-  get nextQueue(): T[] | null {
-    return this._nextQueue;
-  }
-
-  set nextQueue(value: T[]) {
-    this._nextQueue = value;
-  }
-
-  nextQueueCount(): number {
-    return this._nextQueue ? this._nextQueue.length : 0;
-  }
-
-  addNextPlaySong(value: T) {
-    if (!this._nextQueue) this._nextQueue = [];
-    this._nextQueue.push(value);
-  }
-
   // key-value
   toMap(): Record<string, any> {
     const result: Record<string, any> = {};
-    result['AUDIO_ID'] = this._audioId;
-    result['PLAY_INDEX'] = this._playIndex;
-    result['PLAYLIST'] = this._playlist;
-    result['AUDIO_PROGRESS'] = this._progress;
-    result['PLAY_MODE'] = this._playMode;
+    result['CURRENT_AUDIO_ID'] = this.currAudioId;
+    result['PLAY_INDEX'] = this.currPlayIndex;
+    result['PLAYLIST'] = this.playlist;
+    result['AUDIO_PROGRESS'] = this.progress;
+    result['PLAY_MODE'] = this.playMode;
     return result;
   }
 
   fromJson(json: Object) {
-    this.audioId = json['AUDIO_ID'];
-    this.playMode = json['PLAY_MODE'];
+    this.currAudioId = json['CURRENT_AUDIO_ID'];
+    if (json['PLAY_MODE'] < PlayModeArray.length) {
+      this.playMode = PlayModeArray[json['PLAY_MODE']];
+    }
     this.progress = json['AUDIO_PROGRESS'];
-    this._playIndex = json['PLAY_INDEX'];
+    this.currPlayIndex = json['PLAY_INDEX'];
+    console.log(JSON.stringify(json));
   }
 }

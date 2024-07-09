@@ -1,8 +1,9 @@
-import { AvPlayMode } from '../common/utils/AudioConfig';
+import { AvPlayMode, PlayModeArray } from '../common/utils/AudioConfig';
 import { AudioService } from '../common/utils/AudioService';
 import { ProgressBarComponent } from './ProgressBarComponent';
+import { IconDataInterface } from './SongItemComponent';
 
-export enum ControlEventType {
+export enum ControlActionType {
   PLAY_MODE,
   PLAY_LAST,
   PLAY_STATE,
@@ -16,50 +17,61 @@ interface ControlIconInterface {
   fillColor: string;
   backgroundColor?: string;
   padding?: number;
-  type?: ControlEventType;
+  type?: ControlActionType;
 }
 
 export const ControlIcons: ControlIconInterface[] = [
   {
     size: 24,
-    fillColor: '#66FFFFFF',
+    fillColor: '#99FFFFFF',
     icon: $r('app.media.ic_public_order_play_line'),
-    type: ControlEventType.PLAY_MODE,
+    type: ControlActionType.PLAY_MODE,
   },
   {
-    size: 32,
+    size: 36,
+    padding: 6,
     fillColor: '#99FFFFFF',
     icon: $r('app.media.ic_public_skip_back_fill'),
-    type: ControlEventType.PLAY_LAST,
+    type: ControlActionType.PLAY_LAST,
+    backgroundColor: '#33FFFFFF',
   },
   {
     size: 60,
     padding: 10,
     fillColor: '#99FFFFFF',
-    // backgroundColor: '#33FFFFFF',
     icon: $r('app.media.ic_public_play_large_fill'),
-    type: ControlEventType.PLAY_STATE,
+    type: ControlActionType.PLAY_STATE,
+    backgroundColor: '#33FFFFFF'
   },
   {
-    size: 32,
+    size: 36,
+    padding: 6,
     fillColor: '#99FFFFFF',
     icon: $r('app.media.ic_public_skip_forward_fill'),
-    type: ControlEventType.PLAY_NEXT,
+    type: ControlActionType.PLAY_NEXT,
+    backgroundColor: '#33FFFFFF',
   },
   {
     size: 24,
-    fillColor: '#66FFFFFF',
+    fillColor: '#99FFFFFF',
     icon: $r('app.media.ic_public_play_list_line'),
-    type: ControlEventType.PLAY_LIST,
+    type: ControlActionType.PLAY_LIST,
   }
 ]
+
+const PlayModeIcons: Resource[] = [
+$r('app.media.ic_public_order_play_line'),
+$r('app.media.ic_public_shuffle_line'),
+$r('app.media.ic_public_repeat_one_line'),
+$r('app.media.ic_public_repeat_2_fill')
+];
 
 @Component
 export struct AudioControlComponent {
   private icons: ControlIconInterface[] = [];
   @State _fontColor: string = '#FFFFFF';
   @State _sliderSelectedColor: string = '#77FFFFFF';
-  private onItemClick: (type: ControlEventType) => void;
+  private onItemClick: (type: ControlActionType) => void;
 
   build() {
     Column({ space: 16 }) {
@@ -74,7 +86,7 @@ export struct AudioControlComponent {
       /**
        * _ControlIconComponent
        */
-      Row({ space: 60 }) {
+      Row({ space: 66 }) {
         ForEach(this.icons, (item: ControlIconInterface) => {
           _ControlIconComponent({ icon: item, onItemClick: (value) => {
             if (this.onItemClick) this.onItemClick(value);
@@ -88,68 +100,68 @@ export struct AudioControlComponent {
 @Component
 struct _ControlIconComponent {
   private icon: ControlIconInterface | null = null;
-  @State _currentIconResource: Resource | null = null;
+  @State _iconData: Resource | null = null;
+  @StorageProp('PLAY_MODE') _playMode: number = AvPlayMode.ORDER;
   @StorageProp('IS_PLAYING') @Watch('onPlayStateChange') isPlaying: boolean = false;
-  private onItemClick: (value: ControlEventType) => void;
+  private onItemClick: (value: ControlActionType) => void;
 
   aboutToAppear() {
-    this._currentIconResource = this.icon.icon as Resource;
-    this.onPlayStateChange();
+    this._iconData = this.icon.icon as Resource;
+    if (this.icon.type === ControlActionType.PLAY_MODE) {
+      this._iconData = PlayModeIcons[this._playMode];
+    } else if (this.icon.type === ControlActionType.PLAY_STATE) {
+      this.onPlayStateChange();
+    }
   }
 
   onPlayStateChange() {
-    if (this.icon.type === ControlEventType.PLAY_STATE) {
-      this._currentIconResource = this.isPlaying ? $r('app.media.ic_public_pause_large_fill') : $r('app.media.ic_public_play_large_fill');
+    if (this.icon.type === ControlActionType.PLAY_STATE) {
+      this._iconData = this.isPlaying ? $r('app.media.ic_public_pause_large_fill') : $r('app.media.ic_public_play_large_fill');
     }
   }
 
   handleIconClick() {
     if (this.onItemClick) this.onItemClick(this.icon.type);
     switch (this.icon.type) {
-      case ControlEventType.PLAY_MODE:
+      case ControlActionType.PLAY_MODE:
         this.handlePlayModeChange();
         break;
-      case ControlEventType.PLAY_LAST:
+      case ControlActionType.PLAY_LAST:
         AudioService.getInstance().playPrevious();
         break;
-      case ControlEventType.PLAY_STATE:
+      case ControlActionType.PLAY_STATE:
         this.handlePlayStateChange();
         break;
-      case ControlEventType.PLAY_NEXT:
+      case ControlActionType.PLAY_NEXT:
         AudioService.getInstance().playNext();
         break;
-      case ControlEventType.PLAY_LIST:
+      case ControlActionType.PLAY_LIST:
       // this.playlistDialogController.open();
         break;
     }
   }
 
-  handlePlayStateChange() {
+  handlePlayStateChange(): void {
     if (this.isPlaying) AudioService.getInstance().pause();
     else AudioService.getInstance().play();
   }
 
   handlePlayModeChange() {
-    const resource = [
-    $r('app.media.ic_public_order_play_line'),
-    $r('app.media.ic_public_shuffle_line'),
-    $r('app.media.ic_public_repeat_one_line'),
-    $r('app.media.ic_public_repeat_2_fill')];
-    const modeArr = [AvPlayMode.ORDER, AvPlayMode.RANDOM, AvPlayMode.SINGLE_CYCLE, AvPlayMode.LIST_CYCLE];
     let index = AudioService.getInstance().getPlayMode() + 1;
-    if (index > modeArr.length - 1) index = 0;
-    this._currentIconResource = resource[index];
-    AudioService.getInstance().setPlayMode(modeArr[index]);
+    if (index > PlayModeArray.length - 1) index = 0;
+    this._iconData = PlayModeIcons[index];
+    AudioService.getInstance().setPlayMode(PlayModeArray[index]);
   }
 
   build() {
-    Image(this._currentIconResource)
+    Image(this._iconData)
       .aspectRatio(1)
       .width(this.icon.size)
       .fillColor(this.icon.fillColor)
       .backgroundColor(this.icon.backgroundColor)
       .borderRadius(this.icon.size)
       .padding(this.icon.padding)
+      .backgroundColor(this.icon.backgroundColor)
       .onClick(() => this.handleIconClick());
   }
 }

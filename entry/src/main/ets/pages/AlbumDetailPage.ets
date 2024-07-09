@@ -11,6 +11,7 @@ import { CommonDataSource } from '../models/CommonDataSource';
 import { Song } from '../models/SongModel';
 import { fetchAlbumDetail } from '../api/SongApi';
 import { Album } from '../models/AlbumDetailModel';
+import { DataSource } from '../models/DataSource';
 
 
 @Entry
@@ -24,7 +25,7 @@ struct AlbumDetailPage {
   @State dialogData: SongModel | null = null;
   @State album: ArtistAlbumModel | null = null;
   @State _album: Album = null;
-  private _songs: CommonDataSource<Song> = new CommonDataSource<Song>();
+  private _songs: DataSource<Song> = new DataSource<Song>();
   private _dialogData: Song | null = null;
   private songInfoDialogController: CustomDialogController = new CustomDialogController({
     alignment: DialogAlignment.Center,
@@ -47,8 +48,8 @@ struct AlbumDetailPage {
   @Builder BodyBuilder() {
     Column() {
       SongListComponent({
-        songList: this._songs,
         songCount: this.album ? this.album.size : 0,
+        data: [{ data: this._songs }],
       });
     }
     .padding({ left: 12, right: 12 })

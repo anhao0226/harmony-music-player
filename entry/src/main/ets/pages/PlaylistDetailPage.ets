@@ -15,6 +15,8 @@ import { CommonDataSource } from '../models/CommonDataSource';
 import { Song } from '../models/SongModel';
 import { fetchSongs } from '../api/SongApi';
 import { CommentType } from '../api/CommentApi';
+import { ActionType } from '../components/SongItemComponent';
+import { DataSource } from '../models/DataSource';
 
 @Entry
 @Component
@@ -22,7 +24,7 @@ struct PlaylistDetailPage {
   private TAG = 'PLAYLIST_DETAIL_PAGE';
   @State pageOffset: number = 0;
   private _dialogData: Song | null = null;
-  private _songs: CommonDataSource<Song> = new CommonDataSource<Song>();
+  private _songs: DataSource<Song> = new DataSource<Song>();
   //
   @State _name: string = '';
   @State _albumSrc: string = '';
@@ -76,7 +78,7 @@ struct PlaylistDetailPage {
   }
 
   handleListItemClick(item: Song, index: number): void {
-    AudioService.getInstance().setPlaylist(this._songs.slice(index));
+    AudioService.getInstance().updatePlaylist(this._songs.slice(index));
     AudioService.getInstance().start();
     router.pushUrl({
       url: 'pages/SongPlayerPage',
@@ -91,6 +93,9 @@ struct PlaylistDetailPage {
       ids.push(this._playlistDetail.trackIds[i].id);
     }
     fetchSongs(ids).then((value) => {
+      value.songs.forEach((item) => {
+        console.log(`Song name  ${JSON.stringify(item.name )}`);
+      })
       this._songs.pushDataFromArray(value.songs);
       this.pageOffset += limit;
     });
@@ -144,9 +149,11 @@ struct PlaylistDetailPage {
   @Builder RBodyBuild() {
     Column() {
       SongListComponent({
-        songList: this._songs,
+        lanes: 2,
         songCount: this._trackCount,
         onReachEnd: () => this.getMoreSongs(),
+        actions: [ActionType.Mv, ActionType.AddToPlaylist, ActionType.MORE],
+        data: [{ data: this._songs }],
       });
     }.padding({ left: 16, right: 16 }).layoutWeight(1);
   }
@@ -188,4 +195,3 @@ struct PlaylistDetailPage {
     }
   }
 }
-

@@ -1,6 +1,5 @@
 import window from '@ohos.window'
 
-
 export class WindowsConstant {
   static _avoidArea: window.AvoidArea
 

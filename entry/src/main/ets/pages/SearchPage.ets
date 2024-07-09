@@ -1,161 +1,198 @@
 import router from '@ohos.router';
-import { fetchSearchData } from '../api/SearchApi';
-import { AlbumInter, ArtistInter, SongInter } from '../view_models/SearchModel';
+import { fetchHotSearchDetail, fetchSongs, fetchSuggestSearchResult } from '../api/SongApi';
+import { AudioService } from '../common/utils/AudioService';
+import { ActionType, SongItemComponent } from '../components/SongItemComponent';
+import { SearchDetail } from '../models/HotSearchDetailModel';
+import { Song } from '../models/SongModel';
+import { Artist } from '../models/SuggestSearchModel';
 
-@Entry
 @Component
-struct SearchPage {
-  @State _songs: SongInter[] = [];
-  @State _albums: AlbumInter[] = [];
-  @State _artists: ArtistInter[] = [];
+export struct SearchPage {
+  @State hotSearch: SearchDetail[] = [];
+  @State showSearchResult: boolean = false;
+  @State searchVal: string = '';
 
-  handleSearchData(keywords: string) {
-    fetchSearchData(keywords).then((value) => {
-      this._songs = value.songs;
-      this._albums = value.albums;
-      this._artists = value.artists;
+  aboutToAppear() {
+    fetchHotSearchDetail().then((result: SearchDetail[]) => {
+      this.hotSearch = result;
     })
+  }
+
+  @Builder OrderListBuilder() {
+
   }
 
   build() {
     Navigation() {
       Column({ space: 18 }) {
-        TextInput().height(56).onChange((value: string) => {
-          this.handleSearchData(value);
-        });
+        //
+        TextInput({ text: '', placeholder: 'input your word...' })
+          .height(54)
+          .margin({ top: 20, left: 20, right: 20 })
+          .fontSize(22)
+          .borderRadius(30)
+          .placeholderColor(Color.Grey)
+          .placeholderFont({ size: 16, weight: 400 })
+          .caretColor(Color.Blue)
+          .fontColor(Color.Black)
+          .backgroundColor('#FFFFFF')
+          .onChange((value: string) => {
+            this.showSearchResult = value.length ? true : false;
+            this.searchVal = value;
+          })
+
+
         Scroll() {
-          Column() {
-            if (this._artists.length) {
-              _ArtistComponent({ data: $_artists });
-            }
-            if (this._songs.length) {
-              _SongComponent({ data: $_songs });
-            }
+          if (this.showSearchResult) {
+            _SearchResult({
+              searchVal: this.searchVal,
+            });
+          } else {
+            Row({ space: 20 }) {
+              Column({ space: 10 }) {
+                Text('Hot')
+                  .fontSize(22)
+                  .fontWeight(FontWeight.Bold)
+                  .margin({ top: 10, right: 10 });
+                ForEach(this.hotSearch, (item: SearchDetail, index: number) => {
+                  Row({ space: 6 }) {
+                    Text((index + 1).toString())
+                      .fontSize(18)
+                      .fontColor(index < 3 ? '#E5E84026' : '#99000000')
+                      .fontWeight(FontWeight.Bold);
+                    Text(item.searchWord).fontSize(18);
+                  }
+                }, (_, index) => `SEARCH_ITEM_${index}`);
+              }
+              .backgroundColor('#FFFFFF')
+              .alignItems(HorizontalAlign.Start)
+              .width(260)
+              .borderRadius(10)
+              .padding(16)
+
+              Column({ space: 10 }) {
+                Text('Artist')
+                  .fontSize(22)
+                  .fontWeight(FontWeight.Bold)
+                  .margin({ top: 10, right: 10 });
+                ForEach(this.hotSearch, (item: SearchDetail, index: number) => {
+                  Row({ space: 6 }) {
+                    Text((index + 1).toString()).fontSize(18)
+                      .fontColor(index < 3 ? '#E5E84026' : '#99000000')
+                      .fontWeight(FontWeight.Bold);
+                    Text(item.searchWord).fontSize(18);
+                  }
+                }, (_, index) => `SEARCH_ITEM_${index}`);
+              }
+              .backgroundColor('#FFFFFF')
+              .alignItems(HorizontalAlign.Start)
+              .width(260)
+              .borderRadius(10)
+              .padding(16)
+
+
+              Column({ space: 10 }) {
+                Text('Mv')
+                  .fontSize(22)
+                  .fontWeight(FontWeight.Bold)
+                  .margin({ top: 10, right: 10 });
+                ForEach(this.hotSearch, (item: SearchDetail, index: number) => {
+                  Row({ space: 6 }) {
+                    Text((index + 1).toString()).fontSize(18)
+                      .fontColor(index < 3 ? '#E5E84026' : '#99000000')
+                      .fontWeight(FontWeight.Bold);
+                    Text(item.searchWord).fontSize(18);
+                  }
+                }, (_, index) => `SEARCH_ITEM_${index}`);
+              }
+              .backgroundColor('#FFFFFF')
+              .alignItems(HorizontalAlign.Start)
+              .width(260)
+              .borderRadius(10)
+              .padding(16)
+
+            }.padding({ bottom: 20 }).width('100%').justifyContent(FlexAlign.Center);
           }
-        }.scrollable(ScrollDirection.Vertical);
-      }.width('100%').height('100%').padding(26)
+        }
+        .scrollable(ScrollDirection.Vertical)
+        .layoutWeight(1)
+        .padding({ bottom: 20 })
+        .scrollBar(BarState.Off)
+        .margin({ left: 20, right: 20 });
+      }.width('100%').height('100%');
     }
-    .titleMode(NavigationTitleMode.Free)
+    .titleMode(NavigationTitleMode.Full)
     .navBarWidth('100%')
-    .title('Search')
-    .backgroundColor('#FFFFFF');
-  }
-}
-
-@Extend(Text) function songTagStyle(color: ResourceColor) {
-  .border({ width: 1.4 })
-  .borderRadius(3)
-  .fontWeight(FontWeight.Bold)
-  .borderColor(color)
-  .fontColor(color)
-  .fontSize(10)
-  .padding({ left: 2, right: 2, top: 0.4, bottom: 0.4 })
-}
-
-export enum TapType { MORE }
-
-type OnTapCallback = (tapType: TapType, value: SongInter) => void;
-
-@Component
-struct _AlbumComponent {
-  private data: AlbumInter;
-
-  build() {
-
+    .title('Search');
+    // .backgroundColor('#FFFFFF');
   }
 }
 
 @Component
-struct _ArtistComponent {
-  @Link data: ArtistInter[];
+struct _SearchResult {
+  @Prop @Watch('onSearchValChange') searchVal: string;
+  @State songs: Song[] = [];
+  @State artists: Artist[] = [];
 
-  build() {
-    Column({ space: 10 }) {
-      Text('Artist').fontSize(22).fontWeight(FontWeight.Bold).padding({ top: 20 });
-      ForEach(this.data, (item: ArtistInter) => {
-        Row({ space: 10 }) {
-          Image(item.picUrl).width(56).aspectRatio(1).borderRadius(6);
-          Text(item.name).fontSize(20);
-        }.width('100%').onClick(() => {
-          router.pushUrl({
-            url: 'pages/ArtistDetailPage',
-            params: { artistId: item.id }
-          });
-        });
-      }, (item: ArtistInter, _) => `${item.id}_ALBUM_ITEM`);
-    }.alignItems(HorizontalAlign.Start);
-  }
-}
-
-@Component
-struct _SongComponent {
-  @Link data: SongInter[];
-
-  formatArtists(ars: ArtistInter[]): string {
-    let str: string = '';
-    if (ars.length === 0) return str;
-    if (ars.length === 1) return ars[0].name;
-    let length = ars.length;
-    str = ars[0].name;
-    for (let i = 1; i < length; i++) {
-      str += '/' + ars[i].name;
-    }
-    console.log(str);
-    return str;
+  aboutToAppear() {
+    this.handleSearchData();
   }
 
-  @Builder SongTagUI(fee: number) {
-    if (fee === 0) {
-      // Text('free').songTagStyle('#A6C2BE');
-    } else if (fee === 1) {
-      Text('VIP').songTagStyle($r('app.color.song_item_tag_color'));
-    } else {
-      // Text('other').songTagStyle('#F5DC62');
-    }
+  onSearchValChange() {
+    this.handleSearchData();
   }
 
-  @Builder IndexUI(index: number) {
-    Text(new String(index).padStart(2, '0'))
-      .width(40)
-      .fontSize(20)
-      .textAlign(TextAlign.Center)
-      .fontColor('#66000000');
+  handleSearchData() {
+    fetchSuggestSearchResult(this.searchVal).then((value) => {
+      this.artists = value.artists;
+      let songIds: number[] = [];
+      value.songs.forEach((item) => songIds.push(item.id));
+      fetchSongs(songIds).then((result) => {
+        this.songs = result.songs;
+      });
+    })
   }
 
   build() {
-    Column({ space: 10 }) {
-      Text('Songs').fontSize(22).fontWeight(FontWeight.Bold).padding({ top: 20 });
-      ForEach(this.data, (item: SongInter, _) => {
-        Row({ space: 10 }) {
-          Column({ space: 4 }) {
-
-            Text(item.name)
-              .fontSize(20)
-              .maxLines(1)
-              .textOverflow({ overflow: TextOverflow.Ellipsis })
-              .fontColor('E5000000');
-
-            Row({ space: 4 }) {
-              this.SongTagUI(item.fee);
-              Text(this.formatArtists(item.artists))
-                .fontSize(15)
-                .fontColor('#66000000')
-                .maxLines(1)
-                .textOverflow({ overflow: TextOverflow.Ellipsis });
-            }
-          }.alignItems(HorizontalAlign.Start).layoutWeight(1);
-
-          Blank();
-
-          Image($r('app.media.ic_public_more_2_fill'))
-            .width(36)
-            .padding({ left: 5, right: 5 })
-            .fillColor('#66000000')
-            .onClick(() => {
-              // if (this.onTap) this.onTap(TapType.MORE, this.data);
-            })
-        }.width('100%')
-      }, (item: SongInter) => `${item.id}_SONG_ITEM`);
-    }.alignItems(HorizontalAlign.Start)
+    Column() {
+      /**
+       *
+       */
+      Column({ space: 10 }) {
+        Text('Artist').fontSize(24).fontWeight(FontWeight.Medium).margin({ top: 20 }).fontColor('#99000000');
+        Column() {
+          ForEach(this.artists, (item: Artist) => {
+            Row({ space: 10 }) {
+              Image(item.picUrl).width(64).aspectRatio(1).borderRadius(6);
+              Text(item.name).fontSize(20);
+            }.width('100%').onClick(() => {
+              router.pushUrl({
+                url: 'pages/ArtistDetailPage',
+                params: { artistId: item.id }
+              });
+            });
+          }, (item: Artist, _) => `${item.id}_ALBUM_ITEM`);
+        }.backgroundColor('#FFFFFF').borderRadius(10).padding(10);
+      }.alignItems(HorizontalAlign.Start);
+      /**
+       * Songs
+       */
+      Column({ space: 10 }) {
+        Text('Songs').fontSize(24).fontWeight(FontWeight.Medium).margin({ top: 20 }).fontColor('#99000000');
+        Column() {
+          ForEach(this.songs, (item: Song, index: number) => {
+            SongItemComponent({
+              data: item,
+              actions: [ActionType.Mv, ActionType.AddToPlaylist, ActionType.MORE],
+              onItemTap: () => {
+                AudioService.getInstance().updatePlaylist([item]);
+                AudioService.getInstance().start();
+                router.pushUrl({ url: 'pages/SongPlayerPage', params: { songId: item.id } })
+              },
+            }).height(66);
+          }, (item: Song, index: number) => `SONG_ITEM_${item.id}`);
+        }.backgroundColor('#FFFFFF').borderRadius(10).padding(10);
+      }.alignItems(HorizontalAlign.Start);
+    }.height('100%');
   }
 }

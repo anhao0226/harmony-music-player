@@ -3,6 +3,8 @@ import { fetchSongs } from '../api/SongApi';
 import { fetchSongLyric } from '../api/SongLyricApi';
 import { AudioService } from '../common/utils/AudioService';
 import { rgbaToHexColor } from '../common/utils/ColorUtil';
+import { AnimatedCrossFade } from '../components/AnimatedCrossFade';
+import { IconComponent } from '../components/IconComponent';
 import { PlaylistDialogComponent } from '../components/PlaylistDialogComponent';
 import { SongInfoDialogComponent } from '../components/SongInfoIDialogContent';
 import { Song } from '../models/SongModel';
@@ -85,134 +87,12 @@ import { Song } from '../models/SongModel';
 // const lyricStr3 = `[00:00.000] 作词 : 罗大佑\n[00:01.000] 作曲 : 罗大佑\n[00:16.600]起初不经意的你\n[00:20.600]和少年不经世的我\n[00:24.600]红尘中的情缘\n[00:27.600]只因那生命匆匆不语的胶着\n[00:33.600]想是人世间的错\n[00:36.600]或前世流传的因果\n[00:41.600]终生的所有\n[00:43.600]也不惜换取刹那阴阳的交流\n[00:49.600]来易来 去难去\n[00:53.600]数十载的人世游\n[00:57.600]分易分 聚难聚\n[01:02.600]爱与恨的千古愁\n[01:06.600]本应属于你的心\n[01:10.600]它依然护紧我胸口\n[01:14.600]为只为那尘世转变的面孔后的翻云覆雨手\n[01:22.600]来易来 去难去\n[01:27.600]数十载的人世游\n[01:30.600]分易分 聚难聚\n[01:35.600]爱与恨的千古愁\n[01:39.600]于是不愿走的你\n[01:43.600]要告别已不见的我\n[01:47.600]至今世间仍有隐约的耳语\n[01:51.600]跟随我俩的传说\n[02:12.600]来易来 去难去\n[02:16.600]数十载的人世游\n[02:20.600]分易分 聚难聚\n[02:24.600]爱与恨的千古愁\n[02:29.600]于是不愿走的你\n[02:33.600]要告别已不见的我\n[02:37.600]至今世间仍有隐约的耳语\n[02:41.600]跟随我俩的传说\n[02:45.600]滚滚红尘里有隐约的耳语\n[02:50.600]跟随我俩的传说\n`;
 //
 //
-interface LyricInterface {
-  time: number,
-  text: string,
-  source: string,
-}
 
-@Component
-export struct LyComponent {
-  @State lyricList: LyricInterface[] = [];
-  @State currTime: number = 0;
-  @State currIndex: number = 0;
-  private scroller: Scroller = new Scroller();
 
-  formatTime(str: string): number {
-    let mSec = 2;
-    let time = 0;
-    const timeArr = /\[(\d{2}):(\d{2})(\.(\d{2,3}))?]/.exec(str)?.map((item, index) => {
-      if (index === 4) {
-        mSec = item?.length ?? mSec;
-      }
-      return Number(item)
-    });
-    time = timeArr[1] * 60 + timeArr[2] + (timeArr[4] / (mSec === 2 ? 100 : 1000) ?? 0)
-    return time
-  }
-
-  aboutToAppear() {
-    fetchSongLyric(238346).then((str: string) => {
-
-      try {
-        let lyricStrList = str.split('\n');
-        lyricStrList.pop();
-        let renderLyricList: LyricInterface[] = [];
-
-        lyricStrList.forEach(((item: string) => {
-          let timeMatchArr = item.match(/\[(\d{2}):(\d{2})(\.(\d{2,3}))?]/g);
-          if (timeMatchArr) {
-            let text = item.replace(timeMatchArr[0], '');
-            renderLyricList.push({ time: this.formatTime(timeMatchArr[0]), text, source: item });
-          }
-        }));
-        this.lyricList = renderLyricList;
-      } catch (err) {
-        console.log(err);
-      }
-      // let lyricStrList = str.split('\n');
-      // lyricStrList.pop();
-      // let renderLyricList: LyricInterface[] = [];
-      //
-      // lyricStrList.forEach((item => {
-      //   let timeStr = item.match(/\[(\d{2}):(\d{2})(\.(\d{2,3}))?]/g)[0];
-      //   let text = item.replace(timeStr, '');
-      //   renderLyricList.push({ time: this.formatTime(timeStr), text, source: item });
-      // }));
-      // this.lyricList = lyricStrList.map((item: string) => {
-      //   let timeStr = item.match(/\[(\d{2}):(\d{2})(\.(\d{2,3}))?]/g)[0];
-      //   let text = item.replace(timeStr, '');
-      //   return { time: this.formatTime(timeStr), text, source: item };
-      // });
-      // console.log(renderLyricList.length.toString());
-    })
-  }
-
-  findIndex() {
-    let i = this.currIndex;
-    while (i < this.lyricList.length) {
-      if (this.currTime > this.lyricList[i].time * 1000) i++;
-      else break;
-    }
-    if (i - 1 !== this.currIndex) {
-      this.scroller.scrollTo({
-        xOffset: 0,
-        yOffset: this.currIndex * 50,
-        animation: { duration: 325, curve: Curve.EaseInOut }
-      })
-    }
-    this.currIndex = i - 1;
-  }
-
-  build() {
-    Column() {
-      Text(this.currIndex.toString());
-      Button('Start').onClick(() => {
-        setInterval(() => {
-          this.currTime += 16;
-          this.findIndex();
-        }, 16)
-      })
-      Text(this.lyricList.length.toString());
-      List({ scroller: this.scroller }) {
-        ListItem().height(100);
-        ForEach(this.lyricList, (item: LyricInterface, index: number) => {
-          ListItem() {
-            Row() {
-              Text(item.text)
-                .fontSize(22)
-                .fontColor((this.currIndex === index) ? Color.Green : Color.Black)
-                .textAlign(TextAlign.Center);
-              Text(item.time.toString());
-            }
-          }.align(Alignment.Center).width('100%').height(50);
-        }, (_, index: number) => index.toString().concat('_LYRIC_ITEM'))
-      }.height('100%').width('100%');
-    }
-  }
-}
-
-// let lyricList = lyricStr2.split('\n');
-// lyricList.forEach((item) => {
-//   console.log(item);
-//   const lrcItem: any = {}
-//   lrcItem.time = item.match(/\([0-9]+,[0-9]+\)/g);
-//   lrcItem.text = item.match(/(?<=\))\S\s?(?=\()/g);
-//   console.log(JSON.stringify(lrcItem));
-// });
-
-class Example {
-  private _name: string;
-
-  get name(): string {
-    return this._name;
-  }
-
-  set name(value: string) {
-    AppStorage.SetOrCreate('NAME', value);
-    console.log(value);
-    this._name = value;
-  }
+interface SongListDataInterface {
+  data: Song[]
+  lazy: boolean
+  header: string
 }
 
 @Entry
@@ -223,6 +103,10 @@ struct ExPage {
   @State _song: Song = null;
   @State vals: number[] = [1, 2, 3, 4, 5, 6, 7];
   @State copyValues: number[] = [];
+  //
+  controller: CustomDialogController = new CustomDialogController({
+    builder: SongInfoDialogComponent({})
+  });
 
   aboutToAppear() {
     this.copyValues = [...this.vals].reverse();
@@ -232,22 +116,61 @@ struct ExPage {
 
   }
 
+  @Builder ListGroupHeader() {
+    Text('KKK')
+  }
+
+  @Builder FirstIconUI() {
+    Icon({ iconSrc: $r('app.media.ic_public_star_fill'), onTap: () => {
+      this._message = this.isPlaying ? 'A' : 'B';
+    } });
+  }
+
+  @Builder SecondIconUI() {
+    Icon({ iconSrc: $r('app.media.ic_public_pause_large_fill'), onTap: () => {
+      this._message = this.isPlaying ? 'A' : 'B';
+    } });
+  }
+
+  @State isPlaying: boolean = false;
+  @State _message: string = 'ic_public_pause_large_fill';
+
   build() {
     Column() {
+      AnimatedCrossFade({
+        duration: 300,
+        state: this.isPlaying,
+        firstChild: this.FirstIconUI.bind(this),
+        secondChild: this.SecondIconUI.bind(this),
+      });
 
-      ForEach(this.copyValues, (item: number, index: number) => {
-        Text(item.toString())
-          .height(56)
-          .width('100%')
-          .textAlign(TextAlign.Center)
-          .borderWidth(1)
-          .onClick(() => {
-            const endIndex = this.vals.length - 1 - index
-            this.copyValues = [...this.copyValues.slice(endIndex)];
-          });
-      }, (item, index) => `${item.toString()}_ITEM`);
+      Text(`${this.isPlaying}`);
+
+      Text(`${this._message}`);
 
 
+      Text('Change').border({ width: 2 }).onClick(() => {
+        console.log('LLLLLLLLL');
+        this.isPlaying = !this.isPlaying;
+      });
     }
+  }
+}
+
+
+@Component
+export struct Icon {
+  private iconSrc: Resource;
+  private iconSize: number = 22;
+  private iconColor: ResourceColor = Color.Black;
+  private onTap: (() => void) = null;
+
+  build() {
+    Image(this.iconSrc)
+      .width(this.iconSize)
+      .fillColor(this.iconColor)
+      .onClick(() => {
+        if (this.onTap) this.onTap();
+      });
   }
 }

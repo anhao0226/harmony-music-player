@@ -2,16 +2,9 @@ import router from '@ohos.router';
 
 import { SongModel, defaultSongItem, } from '../view_models/playlist_song_model';
 import { BottomBarControlComponent } from '../components/BottomBarControlComponent';
-import { SongDataSource } from '../view_models/SongDataSource';
 import { SongInfoDialogComponent } from '../components/SongInfoIDialogContent';
-import {
-  ArtistAlbumModel,
-  ArtistDetailModel,
-  ArtistMvModel,
-  fetchArtistMv,
-  fetchArtistData
-} from '../view_models/ArtistDetailModel';
-import { CustomTabBar, TabBarItemInterface } from '../components/CustomTabBar';
+import { ArtistAlbumModel, ArtistMvModel, } from '../view_models/ArtistDetailModel';
+import { CustomTabBar, TabBarDataInterface } from '../components/CustomTabBar';
 import { CommonLayoutLComponent, CommonLayoutRComponent } from '../components/CommonPageLayoutComponent';
 import { SongListComponent } from '../components/SongListComponent';
 import { CommonDataSource } from '../models/CommonDataSource';
@@ -21,6 +14,7 @@ import { Artist, ArtistDetail } from '../models/ArtistDetailModel';
 import { HotAlbum } from '../models/ArtistAlbumModel';
 import { ImageComponent } from '../components/ImageComponent';
 import { Mv } from '../models/ArtistMvModel';
+import { DataSource } from '../models/DataSource';
 
 @Entry
 @Component
@@ -34,16 +28,16 @@ struct ArtistDetailPage {
   @State musicCount: number = 0;
   //
   @State _artist: Artist | null = null;
-  private _songs: CommonDataSource<Song> = new CommonDataSource<Song>();
+  private _songs: DataSource<Song> = new DataSource<Song>();
   private _dialogData: Song | null = null
   songInfoDialogController: CustomDialogController = new CustomDialogController({
     alignment: DialogAlignment.Center,
     builder: SongInfoDialogComponent({ data: this._dialogData })
   })
-  @State tabBarItems: TabBarItemInterface[] = [
-    { getText: () => 'Songs' },
-    { getText: () => 'Videos' },
-    { getText: () => 'Albums' }
+  @State tabBarItems: TabBarDataInterface[] = [
+    { text: 'Songs' },
+    { text: 'Videos' },
+    { text: 'Albums' }
   ];
 
   onPageShow() {
@@ -64,9 +58,12 @@ struct ArtistDetailPage {
     });
   }
 
-  @Builder TabBarItem(item: TabBarItemInterface, index: number) {
+  @Builder TabBarItem(item: TabBarDataInterface, index: number) {
     if (index === 0) {
-      SongListComponent({ songCount: this.musicCount, songList: this._songs });
+      SongListComponent({
+        songCount: this.musicCount,
+        data: [{ data: this._songs }],
+      });
     } else if (index === 1) {
       _MvsComponent({ artistId: this._artist.id });
     } else if (index === 2) {
@@ -80,7 +77,7 @@ struct ArtistDetailPage {
     Column() {
       CustomTabBar({
         tabs: $tabBarItems,
-        items: $tabBarItems,
+        tabAlign: FlexAlign.Center,
         viewBuilder: this.TabBarItem.bind(this)
       });
     }.padding({ left: 16, right: 16 });

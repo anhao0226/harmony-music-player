@@ -4,6 +4,7 @@
       "name": "start_window_background",
       "value": "#FFFFFF"
     },
+
     {
       "name": "default_background_color",
       "value": "#B6C5D1"
@@ -15,6 +16,14 @@
     {
       "name": "main_color",
       "value": "#A6C2BE"
+    },
+    {
+      "name": "icon_default_color",
+      "value": "#A6C2BE"
+    },
+    {
+      "name": "tab_bar_color",
+      "value": "#66000000"
     }
   ]
 }
