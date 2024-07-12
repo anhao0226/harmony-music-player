@@ -97,7 +97,7 @@ export struct SongItemComponent {
       router.pushUrl({ url: 'pages/MvPlayerPage', params: { mvId: this.data.mv } });
     } else if (action === ActionType.AddToPlaylist) {
       AudioService.getInstance().add2NextPlaylist(this.data);
-      AlertDialog.show({ message: `We'll play this next` });
+      AlertDialog.show({ message: `We'll play this next` })
     } else if (action === ActionType.Close) {
       // TODO
     }

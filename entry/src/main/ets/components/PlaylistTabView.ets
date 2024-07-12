@@ -1,4 +1,5 @@
 import router from '@ohos.router'
+import { TabInterface } from '../components/TabBar';
 import { PlaylistDataSource } from '../view_models/PlaylistDataSource';
 import { CategoryModel, getHighQualityPlaylist, PlaylistModel } from '../view_models/playlist_song_model'
 import { TabBarDataInterface } from './CustomTabBar';
@@ -11,7 +12,7 @@ export struct PlaylistTabView {
   @State currentBp: string = 'unknown';
   @State isLoading: boolean = false;
   @State showMask: boolean = true;
-  private category: TabBarDataInterface;
+  private category: TabInterface;
   private scroller: Scroller = new Scroller()
   private playlists: PlaylistDataSource = new PlaylistDataSource();
   private _lastUpdateTime: number = 0;

@@ -1,161 +1,155 @@
 import router from '@ohos.router';
 import effectKit from '@ohos.effectKit';
 import {
+  createNetworkImagePixelMap,
   getDarkColor,
   getImageMainColor,
-  getLightColor,
-  getNetworkImagePixelMap,
-  isCloseWhiteColor,
   rgbaToHexColor
 } from '../common/utils/ColorUtil';
-import { AlbumComponent } from './AlbumComponent';
-import { ImageComponent } from './ImageComponent';
-
-const _defaultNavHeight: number = 124;
-const _defaultLLayoutWidth = '35%';
-const _defaultRLayoutWidth = '65%';
-
-export type BuilderCallback = () => void;
+import { CustomImage } from './ImageComponent';
+import image from '@ohos.multimedia.image';
 
 @Component
-export struct CommonLayoutRComponent {
-  @BuilderParam bodyBuilder?: BuilderCallback = this._defaultCloserBuildFunc;
-  @BuilderParam menuBuilder?: BuilderCallback = this._defaultCloserBuildFunc;
-  private _bgColor1: string = '#F1F3F5';
-  private _bgColor2: string = '#FFFFFF';
-
-  @Builder _defaultCloserBuildFunc() {
-  }
-
-  @Builder NavTitle() {
-    Column() {
-      Blank();
-      Row() {
-        this.menuBuilder();
-      }
-      .height(64)
-      .width('100%')
-      .padding({ left: 18, right: 18 });
-    }.height(_defaultNavHeight).width('100%')
-  }
+export struct CommonLayout {
+  @BuilderParam leftContent: (() => void | void);
+  @BuilderParam rightMenu: (() => void | void);
+  @BuilderParam rightContent: (() => void | void);
 
   build() {
-    Column() {
-      this.NavTitle();
+    Row() {
       Column() {
-        this.bodyBuilder();
-      }.padding({ top: 20 })
-      .backgroundColor(this._bgColor2)
-      .width('100%').layoutWeight(1);
-    }
-    .height('100%')
-    .width(_defaultRLayoutWidth)
-    .layoutWeight(1)
-    .backgroundColor(this._bgColor1);
+        this.leftContent();
+      }.width('35%').height('100%');
+      Column() {
+        Column() {
+          this.rightMenu();
+        }
+        .height(124)
+        .width('100%')
+        .justifyContent(FlexAlign.End)
+        .backgroundColor('#F1F3F5');
+        Column() {
+          this.rightContent();
+        }.backgroundColor('#FFFFFF').layoutWeight(1);
+      }.width('65%').height('100%').backgroundColor(Color.Brown);
+    }.width('100%').height('100%').backgroundColor(Color.Red);
   }
 }
 
-export interface ColorChangeValue {
-  mainColor: string;
-  primaryTextColor: string;
-  secondaryTextColor: string;
-}
 
 @Component
-export struct CommonLayoutLComponent {
-  @Prop name: string;
-  @Prop description: string;
-  @Prop @Watch('onImgSrcChange') imgSrc: string;
-  private _backBtnColor: string = '#66FFFFFF';
-  private onColorChange?: (value: ColorChangeValue) => void;
-  @BuilderParam closer?: BuilderCallback = this._defaultCloserBuildFunc;
-  //
-  @State _mainColor: string = '#A6C2BE';
-  @State _primaryTextColor: string = '#A6C2BE';
-  @State _secondaryTextColor: string = '#A6C2BE';
-
-  @Builder _defaultCloserBuildFunc() {
-  }
+export struct AlbumImageComponent {
+  @Prop imgWidth: number;
+  @Prop @Watch('onImageSrcChange') imageSrc: string;
+  private imageMainColor: (color: effectKit.Color) => void;
 
   aboutToAppear() {
-    this.getResourceValue($r('app.color.main_color')).then((value) => {
-      this._mainColor = value;
-    })
+    this.onImageSrcChange();
   }
 
-  getResourceValue(resource: Resource): Promise<string> {
-    return AppStorage.Get<Context>('CONTEXT').resourceManager.getStringValue(resource);
+  onImageSrcChange() {
+    this.updateBackgroundColor();
   }
 
-  async updateBackgroundColor(color: effectKit.Color) {
-    if (!isCloseWhiteColor(color)) {
-      this._primaryTextColor = rgbaToHexColor(getDarkColor(color, 0.1));
-      this._secondaryTextColor = rgbaToHexColor({ ...color, 'alpha': 180 });
-      this._mainColor = rgbaToHexColor(color);
-      if (this.onColorChange) this.onColorChange({
-        primaryTextColor: this._primaryTextColor,
-        secondaryTextColor: this._secondaryTextColor,
-        mainColor: this._mainColor,
-      });
+  async updateBackgroundColor() {
+    if (this.imageMainColor && this.imageSrc.length) {
+      try {
+        let imageData: image.PixelMap = await createNetworkImagePixelMap(this.imageSrc);
+        let mainColor: effectKit.Color = await getImageMainColor(imageData);
+        this.imageMainColor(mainColor);
+      } catch (e) {
+      }
     }
   }
 
-  onImgSrcChange() {
-    // this.updateBackgroundColor(this.imgSrc);
-  }
-
-  @Builder NavTitle() {
-    Column() {
-      Blank();
-      Row() {
-        Image($r('app.media.ic_public_arrow_left_line'))
-          .width(30)
-          .fillColor(this._backBtnColor)
-          .onClick(() => router.back());
-      }
-      .height(64)
-      .width('100%')
-      .padding({ left: 24, right: 24 });
-    }.height(_defaultNavHeight).width('100%')
+  getImageSrc(): string {
+    return this.imageSrc;
   }
 
   build() {
     Stack() {
-      Column() {
-        this.NavTitle();
-        Column({ space: 30 }) {
-          //
-          AlbumComponent({
-            src: this.imgSrc,
-            getMainColor: (color: effectKit.Color) => {
-              this.updateBackgroundColor(color);
-            },
-          })
-          //
-          Column({ space: 10 }) {
-            Text(this.name || '')
-              .fontSize(22)
-              .fontColor(this._primaryTextColor)
-              .textOverflow({ overflow: TextOverflow.Ellipsis });
-            Text(this.description || '')
-              .fontSize(15)
-              .fontColor(this._secondaryTextColor)
-              .textOverflow({ overflow: TextOverflow.Ellipsis })
-              .maxLines(2);
-          }.alignItems(HorizontalAlign.Start);
-
-          if (this.closer) this.closer();
-
-        }.width('66%').alignItems(HorizontalAlign.Start).layoutWeight(1).padding({ top: 20 });
-      }
-      .width('100%')
-      .height('100%')
-      .alignItems(HorizontalAlign.Center)
-      .backgroundBlurStyle(BlurStyle.Thin)
-      .justifyContent(FlexAlign.Start);
+      Column()
+        .height(this.imgWidth)
+        .aspectRatio(1)
+        .backgroundColor('#33000000')
+        .offset({ x: 10, y: 10 })
+        .borderRadius(10);
+      CustomImage({
+        imageSrc: this.getImageSrc(),
+        imageWidth: this.imgWidth,
+        imageBorderRadius: 6,
+        imageAspectRatio: 1,
+      });
     }
-    .width(_defaultLLayoutWidth)
-    .backgroundColor(this._mainColor)
-    .animation({ duration: 625, curve: Curve.EaseIn });
+  }
+}
+
+@Component
+export struct SongBaseInfoComponent {
+  @Prop text: string;
+  @Prop description: string;
+  @Prop imageSrc: string;
+  @Prop imgWidth: number;
+  @BuilderParam closer: (() => void);
+  private onColorChange: (mainColor: effectKit.Color) => void;
+  //
+  @State bgColor: string = '';
+  private textColor: ResourceColor = '#A6C2BE';
+  private descriptionColor: ResourceColor = '#A6C2BE';
+
+  getImageScr(): string {
+    return this.imageSrc;
+  }
+
+  getBackgroundColor(): ResourceColor {
+    return this.bgColor || $r('app.color.default_background_color');
+  }
+
+  build() {
+    Column({ space: 20 }) {
+      //appbar
+      Column() {
+        Image($r('app.media.ic_public_arrow_left_line'))
+          .width(30).fillColor('#66FFFFFF').onClick(() => router.back());
+      }
+      .height(124)
+      .width('100%')
+      .justifyContent(FlexAlign.End)
+      .alignItems(HorizontalAlign.Start)
+      .padding(16);
+      //
+      Column({ space: 20 }) {
+        // album
+        AlbumImageComponent({
+          imageSrc: this.imageSrc,
+          imgWidth: this.imgWidth,
+          imageMainColor: (color: effectKit.Color) => {
+            this.bgColor = rgbaToHexColor(color);
+            this.textColor = rgbaToHexColor(getDarkColor(color, 0.1));
+            this.descriptionColor = rgbaToHexColor({ ...color, 'alpha': 180 });
+            if (this.onColorChange) this.onColorChange(color);
+          }
+        });
+        //
+        Column({ space: 10 }) {
+          Text(this.text || '')
+            .fontSize(22)
+            .fontColor(this.textColor)
+            .textOverflow({ overflow: TextOverflow.Ellipsis })
+            .maxLines(2);
+          Text(this.description || '')
+            .fontSize(15)
+            .fontColor(this.descriptionColor)
+            .textOverflow({ overflow: TextOverflow.Ellipsis })
+            .maxLines(2);
+          //
+          if (this.closer) this.closer();
+        }.alignItems(HorizontalAlign.Start);
+      }.width(this.imgWidth);
+    }
+    .width('100%')
+    .height('100%')
+    .backgroundColor(this.getBackgroundColor())
+    .animation({ duration: 325, curve: Curve.EaseIn });
   }
 }

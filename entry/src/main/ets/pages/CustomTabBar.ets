@@ -1,12 +1,4 @@
-import effectKit from '@ohos.effectKit';
-import { fetchSongs } from '../api/SongApi';
-import { fetchSongLyric } from '../api/SongLyricApi';
-import { AudioService } from '../common/utils/AudioService';
-import { rgbaToHexColor } from '../common/utils/ColorUtil';
-import { AnimatedCrossFade } from '../components/AnimatedCrossFade';
-import { IconComponent } from '../components/IconComponent';
-import { PlaylistDialogComponent } from '../components/PlaylistDialogComponent';
-import { SongInfoDialogComponent } from '../components/SongInfoIDialogContent';
+
 import { Song } from '../models/SongModel';
 
 // @Component
@@ -95,82 +87,244 @@ interface SongListDataInterface {
   header: string
 }
 
+enum ScrollState { Start, Move, End }
+
+enum _SwipeDirection { Left, Right, Up, Down, None }
+
+interface _SwipeValue {
+  offset: number,
+  direction: _SwipeDirection,
+  time: number
+}
+
 @Entry
 @Component
 struct ExPage {
-  @StorageProp('NAME') name: string = 'aaa'
-  private _toStr: string = '';
-  @State _song: Song = null;
-  @State vals: number[] = [1, 2, 3, 4, 5, 6, 7];
-  @State copyValues: number[] = [];
-  //
-  controller: CustomDialogController = new CustomDialogController({
-    builder: SongInfoDialogComponent({})
-  });
+  @State tabs: TabInterface[] = [];
+  @State viewWidth: number = 0;
 
   aboutToAppear() {
-    this.copyValues = [...this.vals].reverse();
   }
 
-  toJson() {
+  @Builder ViewBuilder(item: TabInterface, index: number) {
 
   }
-
-  @Builder ListGroupHeader() {
-    Text('KKK')
-  }
-
-  @Builder FirstIconUI() {
-    Icon({ iconSrc: $r('app.media.ic_public_star_fill'), onTap: () => {
-      this._message = this.isPlaying ? 'A' : 'B';
-    } });
-  }
-
-  @Builder SecondIconUI() {
-    Icon({ iconSrc: $r('app.media.ic_public_pause_large_fill'), onTap: () => {
-      this._message = this.isPlaying ? 'A' : 'B';
-    } });
-  }
-
-  @State isPlaying: boolean = false;
-  @State _message: string = 'ic_public_pause_large_fill';
 
   build() {
     Column() {
-      AnimatedCrossFade({
-        duration: 300,
-        state: this.isPlaying,
-        firstChild: this.FirstIconUI.bind(this),
-        secondChild: this.SecondIconUI.bind(this),
-      });
-
-      Text(`${this.isPlaying}`);
-
-      Text(`${this._message}`);
-
-
-      Text('Change').border({ width: 2 }).onClick(() => {
-        console.log('LLLLLLLLL');
-        this.isPlaying = !this.isPlaying;
-      });
+      // CustomTabBar({
+      //   tabs: $tabs,
+      //   viewBuilder: (item, index) => this.ViewBuilder(item, index),
+      // });
     }
   }
 }
 
 
+//
+export interface TabInterface {
+  text: string
+  icon?: Resource
+}
+//
+export type TabBuilderCallBack = ((tab: TabInterface, index: number) => void | void);
+
 @Component
-export struct Icon {
-  private iconSrc: Resource;
-  private iconSize: number = 22;
-  private iconColor: ResourceColor = Color.Black;
-  private onTap: (() => void) = null;
+struct CustomTabBar {
+  @Link @Watch('onTabsChange') tabs: TabInterface[];
+  @BuilderParam viewBuilder: TabBuilderCallBack = this._defaultViewBuilder;
+  @State tabItemWidth: number = 0;
+  private labelColor: ResourceColor = '#99000000';
+  private labelPadding: Length | Padding = { left: 16, right: 16 };
+  private unselectedLabelColor: ResourceColor = '#66000000';
+  private onViewAreaChange: (oldVal: Area, newVal: Area) => void;
+
+  //
+  @State currIndex: number = 0;
+  @State underlineXOffset: number = 0;
+  @State underlineWidth: number = 0;
+  @State viewState: boolean[] = null;
+  //
+  private tabCount: number = 0;
+  private tabAreas: Area[] = null;
+  private viewItemWidth: number = 0;
+  private startTouchEvent: TouchEvent = null;
+  private tabScroller: Scroller = new Scroller();
+  private viewScroller: Scroller = new Scroller();
+
+  aboutToAppear() {
+    this.onTabsChange();
+  }
+
+  onTabsChange() {
+    this.tabCount = this.tabs.length;
+    this.tabAreas = new Array<Area>(this.tabCount).fill(null, 0, this.tabCount);
+    this.viewState = new Array<boolean>(this.tabCount).fill(false, 0, this.tabCount);
+  }
+
+  scrollToByIndex(index: number) {
+    //
+    this.viewScroller.scrollTo({
+      xOffset: index * this.viewItemWidth,
+      yOffset: 0,
+      animation: { duration: 325, curve: Curve.EaseInOut }
+    });
+
+    //
+    animateTo({ duration: 325, curve: Curve.EaseInOut }, () => {
+      this.underlineWidth = this.tabAreas[index].width as number;
+      this.underlineXOffset = this.tabAreas[index].position.x as number;
+    })
+  }
+
+  handleTouchEvent(event?: TouchEvent) {
+    if (event.type == TouchType.Down) {
+      this.startTouchEvent = event;
+    } else if (event.type == TouchType.Move) {
+      const { direction, offset } = this.calcSwiperValue(this.startTouchEvent, event);
+      const ratio: number = (this.tabAreas[this.currIndex].width as number) / this.viewItemWidth;
+      const { position, width } = this.tabAreas[this.currIndex];
+      if (direction == _SwipeDirection.Left) {
+        animateTo({ duration: 325, curve: Curve.EaseInOut }, () => {
+          this.underlineXOffset = (position.x as number) + ratio * offset;
+        })
+      } else if (direction == _SwipeDirection.Right) {
+        animateTo({ duration: 325, curve: Curve.EaseInOut }, () => {
+          this.underlineXOffset = (position.x as number) - ratio * offset;
+        })
+      }
+    } else if (event.type === TouchType.Up || event.type === TouchType.Cancel) {
+      let currIndex: number = this.currIndex;
+      const scrollMinRatio: number = 1 / 3;
+      const swiperMinSpeed: number = 100 / Math.pow(10, 9);
+      const swiperVal: _SwipeValue = this.calcSwiperValue(this.startTouchEvent, event);
+
+      if (swiperVal.direction != _SwipeDirection.None) {
+        const swiperSpeed: number = swiperVal.offset / swiperVal.time;
+        if (swiperSpeed > swiperMinSpeed) {
+          if (swiperVal.direction == _SwipeDirection.Left || swiperVal.direction == _SwipeDirection.Up) {
+            currIndex = currIndex + 1;
+          } else {
+            currIndex = currIndex - 1;
+          }
+        } else {
+          let xOffset: number = this.viewScroller.currentOffset().xOffset;
+          let scrollMinVal: number = scrollMinRatio * this.viewItemWidth;
+          if (swiperVal.direction == _SwipeDirection.Right || swiperVal.direction == _SwipeDirection.Down) {
+            scrollMinVal = (1 - scrollMinRatio) * this.viewItemWidth;
+          }
+          currIndex = Math.floor((xOffset + scrollMinVal) / this.viewItemWidth);
+        }
+      }
+
+      if (currIndex < 0) {
+        currIndex = 0;
+      } else if (currIndex > this.tabCount - 1) {
+        currIndex = this.tabCount - 1;
+      }
+      this.scrollToByIndex(currIndex);
+      this.currIndex = currIndex;
+    }
+  }
+
+  calcSwiperValue(start: TouchEvent, end: TouchEvent): _SwipeValue {
+    const endObject: TouchObject = end.touches[0];
+    const startObject: TouchObject = start.touches[0];
+    const swiperX: number = endObject.screenX - startObject.screenX;
+    const swiperY: number = endObject.screenY - startObject.screenY;
+    let offset: number = 0;
+    let direction: _SwipeDirection = _SwipeDirection.None;
+    if (Math.abs(swiperX) > Math.abs(swiperY)) {
+      direction = swiperX > 0 ? _SwipeDirection.Right : _SwipeDirection.Left;
+      offset = Math.abs(swiperX);
+    } else {
+      direction = swiperY > 0 ? _SwipeDirection.Down : _SwipeDirection.Up;
+      offset = Math.abs(swiperY);
+    }
+    return { direction, offset, time: end.timestamp - start.timestamp };
+  }
+
+  getTextColor(index: number): ResourceColor {
+    return this.currIndex == index ? this.labelColor : this.unselectedLabelColor;
+  }
+
+  getLabelWidth(): number {
+    return this.viewItemWidth / this.tabCount;
+  }
+
+  getUnderlineWidth(): number {
+    return this.tabAreas[this.currIndex] ? this.tabAreas[this.currIndex].width as number : this.underlineWidth;
+  }
+
+  @Builder _defaultViewBuilder() {
+    Text('')
+  }
 
   build() {
-    Image(this.iconSrc)
-      .width(this.iconSize)
-      .fillColor(this.iconColor)
-      .onClick(() => {
-        if (this.onTap) this.onTap();
+    Column() {
+      /**
+       * Tabs
+       */
+      Scroll(this.tabScroller) {
+        Stack({ alignContent: Alignment.BottomStart }) {
+          Row() {
+            ForEach(this.tabs, (item: TabInterface, index: number) => {
+              Column() {
+                Text(item.text).fontColor(this.getTextColor(index));
+              }
+              .padding(this.labelPadding)
+              .onClick(() => {
+                this.currIndex = index;
+                this.scrollToByIndex(index);
+              })
+              .onAreaChange((oldVal, newVal) => {
+                this.tabAreas[index] = newVal;
+                if (index === 0) {
+                  this.underlineWidth = newVal.width as number;
+                }
+              });
+            }, (item, index) => `TABBAR_ITEM_${index}`);
+          }
+          .height('100%')
+          .justifyContent(FlexAlign.Start)
+          .borderWidth(2);
+          //
+          Column()
+            .height(4)
+            .width(this.underlineWidth)
+            .backgroundColor(Color.Yellow)
+            .offset({ x: this.underlineXOffset });
+        }
+      }
+      .height(65)
+      .width('100%')
+      .scrollable(ScrollDirection.Horizontal)
+      .scrollBar(BarState.Off)
+      .align(Alignment.Start)
+      .backgroundColor(Color.Orange);
+      /**
+       *  View
+       */
+      Scroll(this.viewScroller) {
+        Row() {
+          ForEach(this.tabs, (item: TabInterface, index: number) => {
+            Column() {
+              this.viewBuilder(item, index);
+            }.width('100%').height('100%');
+          }, (item: TabInterface, index: number) => `TABBAR_VIEW_ITEM_${index}`);
+        }
+      }
+      .layoutWeight(1)
+      .scrollBar(BarState.Off)
+      .edgeEffect(EdgeEffect.Spring)
+      .scrollable(ScrollDirection.Horizontal)
+      .onTouch((event?: TouchEvent) => {
+        this.handleTouchEvent(event);
+      })
+      .onAreaChange((oldVal: Area, newVal: Area) => {
+        this.viewItemWidth = (newVal.width as number);
+        this.onViewAreaChange(oldVal, newVal);
       });
+    }
   }
 }

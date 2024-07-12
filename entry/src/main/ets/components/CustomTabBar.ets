@@ -16,14 +16,15 @@ export interface TabViewBuildData {
 }
 /**
  * CustomTabBar
+ * @deprecated
  */
-
 @Component
 export struct CustomTabBar {
   @Link @Watch('onTabsChange') tabs: TabBarDataInterface[];
   private onViewSize: (newVal: Area) => void;
   @BuilderParam viewBuilder: (data: TabViewBuildData) => void;
   @BuilderParam menuBuilder?: () => void = this._defaultMenuBuilder;
+  @Provide('TabBarViewArea') tabBarViewArea: Area = null;
 
   //
   @State barWidth: number = 0;
@@ -43,7 +44,6 @@ export struct CustomTabBar {
   private showUnderline: boolean = true;
   // underline
   @State underlineColor: string = '#A6C2BE';
-  @State underlineHeight: number = 3;
   @State underlineXOffset: number = 0;
   @State underlineWidth: number = 0;
   protected tabCount: number = 0;
@@ -55,7 +55,7 @@ export struct CustomTabBar {
     this.handleScrollTo();
   }
 
-  onTabsChange(){
+  onTabsChange() {
     this.tabCount = this.tabs.length;
     this.tabAreaList = new Array(this.tabCount).fill(null, 0, this.tabCount);
   }
@@ -88,12 +88,13 @@ export struct CustomTabBar {
 
   build() {
     Column() {
+      Text(this.underlineXOffset.toString());
       /**
        * TabBars
        */
       Row() {
         Scroll(this.scroller) {
-          Column() {
+          Stack({ alignContent: Alignment.TopStart }) {
             Row({ space: 24 }) {
               ForEach(this.tabs, (item: TabBarDataInterface, index: number) => {
                 Column() {
@@ -113,19 +114,16 @@ export struct CustomTabBar {
                 });
               }, (_, index) => `${index}_TAB_ITEM`);
             }
-            .height(this.barHeight - this.underlineHeight)
+            .height(this.barHeight)
             .justifyContent(this.tabAlign)
             .width('100%');
             // underline
             _UnderlineComponent({
-              compHeight: this.underlineHeight,
+              compHeight: 2,
               compWidth: this.underlineWidth,
               fillColor: this.underlineColor,
             }).offset({ x: this.underlineXOffset });
           }
-          .width('100%')
-          .height(this.barHeight)
-          .alignItems(HorizontalAlign.Start);
         }
         .scrollable(ScrollDirection.Horizontal)
         .scrollBar(BarState.Off).layoutWeight(1);
@@ -139,33 +137,32 @@ export struct CustomTabBar {
        */
       _TabBarView({
         tabs: $tabs,
-        currIndex: $currIndex,
-        viewBuilder: this.viewBuilder,
-        onViewSwiper: (ratio: number, swiperVal: number) => {
-          //
+        currIndex: this.currIndex,
+        viewBuilder: (data) => this.viewBuilder(data),
+        onViewChange: (index: number) => {
+          this.currIndex = index;
+        },
+        onViewTouchEnd: () => {
+          this.handleScrollTo();
+        },
+        onViewScroll: (ratio: number, swiperVal: number) => {
           const area: Area = this.tabAreaList[this.currIndex];
           let offsetX: number = area.position.x as number;
-          //
-          console.log(`swiperVal: ${swiperVal}`);
           if (swiperVal <= 0 && this.currIndex < this.tabCount - 1) {
-
             const nextIndex: number = this.currIndex + 1;
             const nextArea: Area = this.tabAreaList[nextIndex];
             const width: number = (nextArea.position.x as number - (area.position.x as number));
             this.underlineXOffset = offsetX + width * ratio;
-            console.log(`width: ${width}`);
-            console.log(`offsetX: ${offsetX}`);
           } else if (this.currIndex > 0 && swiperVal > 0) {
             const prevIndex: number = this.currIndex - 1;
             const prevArea: Area = this.tabAreaList[prevIndex];
             const width: number = (area.position.x as number) - (prevArea.position.x as number);
-            console.log(`width: ${width}`);
-            console.log(`offsetX: ${offsetX}`);
             this.underlineXOffset = (offsetX + width) - width * (1 + ratio);
           }
 
         },
-        onViewSizeChange: (oldVal: Area, newVal: Area) => {
+        onViewAreaChange: (oldVal: Area, newVal: Area) => {
+          this.tabBarViewArea = newVal;
           if (this.onViewSize) this.onViewSize(newVal);
         }
       });
@@ -179,23 +176,26 @@ export struct CustomTabBar {
 @Component
 struct _TabBarView {
   @Link @Watch('onTabsChange') tabs: any[];
-  @Link @Watch('onCurrIndexChange') currIndex: number;
+  @Prop @Watch('onCurrIndexChange') currIndex: number;
   @BuilderParam viewBuilder: (data: TabViewBuildData) => void;
-  private onViewSizeChange?: (oldVal: Area, newVal: Area) => void;
-  private onViewSwiper?: (ratio: number, swiperVal: number) => void;
+  private onViewAreaChange?: (oldVal: Area, newVal: Area) => void;
+  private onViewScroll?: (ratio: number, swiperVal: number) => void;
+  private onViewChange?: (index: number) => void;
+  private onViewTouchEnd?: () => void;
   //
   @State viewStateList: boolean[] = [];
-  protected prevIndex: number = 0;
-  protected tabsCount: number = 0;
-  protected viewArea: Area = null;
-  protected scroller: Scroller = new Scroller()
-  protected touchDownOffsetX: number = 0;
-  protected scrollStopEvents: (() => void)[] = [];
-  protected startSwiperTime: number = 0;
-  protected minSwiperSpeed: number = 100 / 1000000000;
-  protected timer: number = -1;
-  protected animationDuration: number = 325;
-  protected viewWidth: number = 0;
+  private prevIndex: number = 0;
+  private tabsCount: number = 0;
+  private viewArea: Area = null;
+  private scroller: Scroller = new Scroller()
+  private touchDownOffsetX: number = 0;
+  private scrollStopEvents: (() => void)[] = [];
+  private startSwiperTime: number = 0;
+  private minSwiperSpeed: number = 100 / 1000000000;
+  private timer: number = -1;
+  private animationDuration: number = 325;
+  private viewWidth: number = 0;
+  private minChangePageVal: number = 0;
 
   aboutToAppear() {
     this.onTabsChange();
@@ -222,18 +222,17 @@ struct _TabBarView {
     this.prevIndex = this.currIndex;
   }
 
-  checkSwiperEvent(event: TouchEvent): boolean {
+  checkSwiperGesture(event: TouchEvent): boolean {
     let hasSwiperEvent: boolean = false;
-    const minSwiperSpeed: number = 100 / 1000000000;
     const timeDiff: number = event.timestamp - this.startSwiperTime;
     const touchUpOffsetX: number = event.touches[0].screenX;
     const swipeXDiff: number = touchUpOffsetX - this.touchDownOffsetX;
     const swiperSpeed: number = Math.abs(swipeXDiff / timeDiff);
-    if (Math.abs(swipeXDiff) > 100 && swiperSpeed > minSwiperSpeed) {
+    if (Math.abs(swipeXDiff) > 100 && swiperSpeed > this.minSwiperSpeed) {
       hasSwiperEvent = true;
       const currIndex_ = swipeXDiff < 0 ? (this.currIndex + 1) : (this.currIndex - 1);
-      if (currIndex_ >= 0 && currIndex_ < this.tabsCount && currIndex_ !== this.currIndex) {
-        this.currIndex = currIndex_;
+      if (currIndex_ >= 0 && currIndex_ < this.tabsCount) {
+        this.onViewChange(currIndex_);
       }
     }
     return hasSwiperEvent;
@@ -243,23 +242,22 @@ struct _TabBarView {
     if (event.type === TouchType.Down) {
       this.touchDownOffsetX = event.touches[0].screenX;
       this.startSwiperTime = event.timestamp;
-    } else if (event.type === TouchType.Move) {
-      if (this.onViewSwiper) {
-        const touchUpOffsetX: number = event.touches[0].screenX;
-        const swipeXDiff: number = touchUpOffsetX - this.touchDownOffsetX;
-        this.onViewSwiper(Math.abs(swipeXDiff / this.viewWidth), swipeXDiff);
-      }
     } else if (event.type === TouchType.Up || event.type === TouchType.Cancel) {
-      if (!this.checkSwiperEvent(event)) {
+      if (!this.checkSwiperGesture(event)) {
         const { xOffset } = this.scroller.currentOffset();
-        const minChangePageVal: number = this.viewWidth * (2 / 3);
-        const modVal: number = xOffset % this.viewWidth;
-        let currIndex_: number = modVal > minChangePageVal ? this.currIndex + 1 : this.currIndex;
+        let currIndex_: number = Math.floor((xOffset + this.minChangePageVal) / this.viewWidth);
         if (currIndex_ === this.currIndex) {
+          this.onViewTouchEnd();
           this.scrollToIndexView(currIndex_);
         } else if (currIndex_ > 0 && currIndex_ < this.tabsCount) {
-          this.currIndex = currIndex_;
+          this.onViewChange(currIndex_);
         }
+      }
+    } else {
+      if (this.onViewScroll) {
+        const touchUpOffsetX: number = event.touches[0].screenX;
+        const swipeXDiff: number = touchUpOffsetX - this.touchDownOffsetX;
+        this.onViewScroll(Math.abs(swipeXDiff / this.viewWidth), swipeXDiff);
       }
     }
   }
@@ -273,9 +271,10 @@ struct _TabBarView {
   }
 
   handleViewAreaChange(oldVal: Area, newVal: Area) {
-    if (this.onViewSizeChange) this.onViewSizeChange(oldVal, newVal);
     this.viewArea = newVal;
     this.viewWidth = newVal.width as number;
+    this.minChangePageVal = this.viewWidth * (2 / 3);
+    if (this.onViewAreaChange) this.onViewAreaChange(oldVal, newVal);
   }
 
   build() {
@@ -290,9 +289,7 @@ struct _TabBarView {
                 area: this.viewArea,
               });
             }.visibility(this.viewStateList[index] ? Visibility.Visible : Visibility.None);
-          }
-          .width('100%')
-          .height('100%')
+          }.width('100%').height('100%');
         }, (_, index) => `TAB_VIEW_${index}`);
       }
     }
@@ -301,6 +298,9 @@ struct _TabBarView {
     .onAreaChange((oldVal: Area, newVal: Area) => this.handleViewAreaChange(oldVal, newVal))
     .edgeEffect(EdgeEffect.Spring)
     .scrollable(ScrollDirection.Horizontal)
+    .onScroll((xOffset: number, yOffset: number) => {
+
+    })
     .onTouch((event: TouchEvent) => this.handleTouchEvent(event));
   }
 }

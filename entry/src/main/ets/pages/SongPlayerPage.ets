@@ -14,6 +14,7 @@ import { IconComponent } from '../components/IconComponent';
 import { CommentType } from '../api/CommentApi';
 import effectKit from '@ohos.effectKit';
 import { ListType } from '../common/utils/AudioShareData';
+import { AlbumImageComponent } from '../components/CommonPageLayoutComponent';
 
 const storage = new LocalStorage({
   'SONG_ID': 0,
@@ -144,13 +145,14 @@ struct SongPlayerPage {
              * left
              */
             Column() {
-              AlbumComponent({
-                src: this._albumImageSrc,
-                getMainColor: (color: effectKit.Color) => {
+              AlbumImageComponent({
+                imgWidth: 300,
+                imageSrc: this._albumImageSrc,
+                imageMainColor: (color:effectKit.Color) => {
                   const hexColor = rgbaToHexColor(color);
                   this._mainColor = hexColor;
                 }
-              }).width('100%');
+              });
             }
             .width('50%')
             .height('100%')

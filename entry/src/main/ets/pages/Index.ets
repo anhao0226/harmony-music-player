@@ -2,6 +2,7 @@ import { AudioService } from '../common/utils/AudioService';
 import { SearchPage } from './SearchPage';
 import { HomePage } from './HomePage';
 import { MvComponent } from './MvPage';
+import { PlaylistDisplayPage } from './PlaylistInfoPage';
 
 @Entry
 @Component
@@ -25,7 +26,8 @@ struct Index {
   }
 
   build() {
-    Tabs({ barPosition: BarPosition.Start, index: 0 }) {
+
+    Tabs({ barPosition: BarPosition.Start, index: 3 }) {
       TabContent() {
         HomePage();
       }.tabBar(this.TabBuilder($r('app.media.ic_public_home_line'), 'Home', 0));
@@ -34,7 +36,7 @@ struct Index {
       }.tabBar(this.TabBuilder($r('app.media.ic_public_menu_search_line'), 'Search', 1));
       TabContent() {
         MvComponent();
-      }.tabBar(this.TabBuilder($r('app.media.ic_public_movie_line'), 'Mv', 2))
+      }.tabBar(this.TabBuilder($r('app.media.ic_public_movie_line'), 'Mv', 2));
     }
     .vertical(true)
     .barWidth(100)

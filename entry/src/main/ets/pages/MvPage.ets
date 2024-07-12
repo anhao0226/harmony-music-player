@@ -1,26 +1,26 @@
 import router from '@ohos.router';
 import { fetchMvs, MvArea } from '../api/SongApi';
-import { CustomTabBar, TabBarDataInterface, TabViewBuildData } from '../components/CustomTabBar';
 import { CustomImage } from '../components/ImageComponent';
 import { SafeAreaComponent } from '../components/SafeAreaComponent';
+import { TabBar, TabInterface } from '../components/TabBar';
 import { MvModel } from '../models/MvDataModel';
 
 @Component
 export struct MvComponent {
-  @State tabs: TabBarDataInterface[] = [];
+  @State tabs: TabInterface[] = [];
   @State viewArea: Area = null;
 
   aboutToAppear() {
-    let tabs_: TabBarDataInterface[] = [];
+    let tabs: TabInterface[] = [];
     Object.values(MvArea).forEach((text: string) => {
-      tabs_.push({ text: text });
+      tabs.push({ text: text });
     })
-    this.tabs = tabs_;
+    this.tabs = tabs;
   }
 
-  @Builder MvListBuilder(viewData: TabViewBuildData) {
+  @Builder MvListBuilder(tabValue: TabInterface, index: number) {
     MvTabBarView({
-      viewData,
+      tab: tabValue,
       viewWidth: this.viewArea ? this.viewArea.width as number : 0
     });
   }
@@ -28,14 +28,10 @@ export struct MvComponent {
   build() {
     Column() {
       SafeAreaComponent() {
-        CustomTabBar({
+        TabBar({
           tabs: $tabs,
-          fontSize: 22,
-          selectedColor: '#99000000',
-          unselectedColor: '#66000000',
-          underlineColor: '#99000000',
-          onViewSize: (area: Area) => this.viewArea = area,
-          viewBuilder: (data: TabViewBuildData) => this.MvListBuilder(data),
+          viewBuilder: (tab: TabInterface, index: number) => this.MvListBuilder(tab, index),
+          onViewAreaChange: (_, newVal: Area) => this.viewArea = newVal,
         });
       }
     }
@@ -45,19 +41,19 @@ export struct MvComponent {
 
 @Component
 struct MvTabBarView {
-  private viewData: TabViewBuildData = null;
   @Prop @Watch('onWidthChange') viewWidth: number;
   @State mvs: MvModel[] = [];
   @State listItemWidth: number = 100;
   protected mvArea: MvArea = MvArea.All;
+  private tab: TabInterface = null;
 
   onWidthChange() {
     this.listItemWidth = (this.viewWidth - 5 * 10) / 5;
   }
 
   aboutToAppear() {
-    if (this.viewData) {
-      this.mvArea = this.viewData.item.text as MvArea;
+    if (this.tab) {
+      this.mvArea = this.tab.text as MvArea;
     }
     fetchMvs({ area: this.mvArea, limit: 30 }).then((result) => {
       this.mvs = result;

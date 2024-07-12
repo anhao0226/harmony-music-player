@@ -3,6 +3,7 @@ import { CustomTabBar, TabBarDataInterface, TabViewBuildData } from '../componen
 import { SafeAreaComponent } from '../components/SafeAreaComponent';
 import { PlaylistTabView } from '../components/PlaylistTabView';
 import { CategoryModel, getPlaylistCategory } from '../view_models/playlist_song_model';
+import { TabBar, TabInterface } from '../components/TabBar';
 
 @Component
 export struct HomePage {
@@ -21,9 +22,9 @@ export struct HomePage {
     this.tabs = tabs_;
   }
 
-  @Builder TabBarViewBuilder(viewData: TabViewBuildData) {
+  @Builder TabBarViewBuilder(tab: TabInterface, index: number) {
     PlaylistTabView({
-      category: viewData.item,
+      category: tab,
       viewWidth: this.viewArea ? this.viewArea.width as number : 0,
     });
   }
@@ -32,16 +33,12 @@ export struct HomePage {
     Column() {
       SafeAreaComponent() {
         Column() {
-          CustomTabBar({
+          TabBar({
             tabs: $tabs,
-            fontSize: 22,
-            unselectedColor: '#66000000',
-            selectedColor: '#99000000',
-            underlineColor: '#99000000',
-            viewBuilder: (viewData: TabViewBuildData) => this.TabBarViewBuilder(viewData),
-            onViewSize: (newVal: Area) => {
+            viewBuilder: (tab, index) => this.TabBarViewBuilder(tab, index),
+            onViewAreaChange: (oldVal: Area, newVal: Area) => {
               this.viewArea = newVal;
-            },
+            }
           }).layoutWeight(1);
           //
           BottomBarControlComponent().key(this.TAG);

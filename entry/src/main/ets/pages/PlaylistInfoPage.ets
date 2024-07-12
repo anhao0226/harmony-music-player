@@ -1,6 +1,7 @@
 import router from '@ohos.router';
 import { AudioService } from '../common/utils/AudioService';
 import { BottomBarControlComponent } from '../components/BottomBarControlComponent';
+import { SongInfoDialogComponent } from '../components/SongInfoIDialogContent';
 import { CommonLayout, SongBaseInfoComponent, } from '../components/CommonPageLayoutComponent';
 import { SongListComponent } from '../components/SongListComponent';
 import { fetchPlaylistDetail } from '../api/PlaylistApi';
@@ -8,11 +9,9 @@ import { Creator, Playlist } from '../view_models/playlist_mode';
 import { CustomImage } from '../components/ImageComponent';
 import { Song } from '../models/SongModel';
 import { fetchSongs } from '../api/SongApi';
+import { CommentType } from '../api/CommentApi';
 import { ActionType } from '../components/SongItemComponent';
 import { DataSource } from '../models/DataSource';
-import effectKit from '@ohos.effectKit';
-import { rgbaToHexColor } from '../common/utils/ColorUtil';
-import { CommentType } from '../api/CommentApi';
 
 interface MenuItemInterface {
   icon: Resource
@@ -20,9 +19,8 @@ interface MenuItemInterface {
   onClick: (() => void) | void;
 }
 
-@Entry
 @Component
-struct PlaylistDetailPage {
+export struct PlaylistDisplayPage {
   private TAG = 'PLAYLIST_DETAIL_PAGE';
   @State name: string = '';
   @State description: string = '';
@@ -32,15 +30,17 @@ struct PlaylistDetailPage {
   @State playCount: number = 0;
   @State trackCount: number = 0;
   @State commentCount: number = 0;
-  @State iconColor: string = '';
+  //
   private songs: DataSource<Song> = new DataSource<Song>();
   private playlist: Playlist = null;
+  private _dialogData: Song | null = null;
   //
   private menus: MenuItemInterface[] = [
     {
       icon: $r('app.media.ic_public_play_list_2_line'),
       text: () => `Play all(${this.trackCount.toString()})`,
       onClick: () => {
+
       }
     },
     {
@@ -53,13 +53,6 @@ struct PlaylistDetailPage {
       icon: $r('app.media.ic_public_message_3_line'),
       text: () => this.commentCount.toString(),
       onClick: () => {
-        router.pushUrl({
-          url: 'pages/Comments',
-          params: {
-            id: this.playlist.id,
-            type: CommentType.PLAYLIST,
-          }
-        });
       }
     },
     {
@@ -69,14 +62,24 @@ struct PlaylistDetailPage {
       }
     }
   ];
+  //
+  songInfoDialogController: CustomDialogController = new CustomDialogController({
+    gridCount: 5,
+    alignment: DialogAlignment.Center,
+    builder: SongInfoDialogComponent({ data: this._dialogData })
+  })
 
   aboutToAppear() {
-    const params = router.getParams();
+    // const params = router.getParams();
     let playlistId: number = 24381616;
-    if (params && params.hasOwnProperty('playlistId')) {
-      playlistId = params['playlistId'];
-    }
+    // if (params && params.hasOwnProperty('playlistId')) {
+    //   playlistId = params['playlistId'];
+    // }
     this.initData(playlistId);
+    // const context = AppStorage.Get('CONTEXT') as Context;
+    // context.resourceManager.getStringValue($r('app.color.main_color')).then((value) => {
+    //   // this._mainColor = value;
+    // })
   }
 
   async initData(playlistId: number) {
@@ -93,15 +96,17 @@ struct PlaylistDetailPage {
     });
   }
 
+  pageTransition() {
+    PageTransitionEnter({ duration: 425, curve: Curve.EaseInOut, type: RouteType.Pop });
+    PageTransitionExit({ duration: 425, curve: Curve.EaseInOut, type: RouteType.Push });
+  }
+
   handleListItemClick(item: Song, index: number): void {
     AudioService.getInstance().updatePlaylist(this.songs.slice(index));
     AudioService.getInstance().start();
     router.pushUrl({
       url: 'pages/SongPlayerPage',
-      params: {
-        songId: item.id,
-        from: { id: this.playlist.id, name: 'playlist' }
-      }
+      params: { songId: item.id, from: { id: this.playlist.id, name: 'playlist' } }
     });
   }
 
@@ -112,6 +117,12 @@ struct PlaylistDetailPage {
       ids.push(this.playlist.trackIds[i].id);
     }
     fetchSongs(ids).then((value) => {
+      value.songs.forEach((item) => {
+        console.log(`Song name  ${JSON.stringify(item.name)}`);
+      })
+
+      console.log(value.songs.length.toString());
+
       this.songs.pushDataFromArray(value.songs);
       this.pageOffset += limit;
     });
@@ -126,13 +137,10 @@ struct PlaylistDetailPage {
 
   @Builder leftContent() {
     SongBaseInfoComponent({
-      imgWidth: 300,
+      imgWidth: 200,
       text: this.name,
       description: this.description,
       imageSrc: this.albumCoverImg,
-      onColorChange: (color: effectKit.Color) => {
-        this.iconColor = rgbaToHexColor(color);
-      }
     }) {
       Row({ space: 10 }) {
         CustomImage({
@@ -142,7 +150,7 @@ struct PlaylistDetailPage {
           imageBorderRadius: 40,
         });
         Text(this.creator ? this.creator.nickname : '')
-          .fontColor(this.iconColor);
+          .fontColor(Color.Orange);
       }.width('100%').justifyContent(FlexAlign.Start);
     };
   }
@@ -171,15 +179,8 @@ struct PlaylistDetailPage {
 
   @Builder iconBuilder(value: any) {
     Row({ space: 8 }) {
-      Image(value.icon)
-        .height(28)
-        .aspectRatio(1)
-        .fillColor(this.iconColor)
-        .animation({ duration: 325, curve: Curve.Linear });
-      Text(value.text())
-        .fontSize(18)
-        .fontColor(this.iconColor)
-        .animation({ duration: 325, curve: Curve.Linear });
+      Image(value.icon).height(28).aspectRatio(1).fillColor(Color.Orange);
+      Text(value.text()).fontSize(18);
     }
     .onClick(() => value.onClick())
     .justifyContent(FlexAlign.Center);
@@ -194,10 +195,5 @@ struct PlaylistDetailPage {
       }).layoutWeight(1);
       BottomBarControlComponent().key(this.TAG);
     }
-  }
-
-  pageTransition() {
-    PageTransitionEnter({ duration: 425, curve: Curve.EaseInOut, type: RouteType.Pop });
-    PageTransitionExit({ duration: 425, curve: Curve.EaseInOut, type: RouteType.Push });
   }
 }
