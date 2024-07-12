@@ -1,6 +1,5 @@
 
 import { httpRequestGet } from '../common/utils/HttpClient';
-import { TabBarItemInterface } from '../components/CustomTabBar';
 // import { TabBarItemInterface } from '../components/CustomTabBar';
 
 export class AlbumModel {
@@ -106,7 +105,7 @@ export class PlaylistModel {
   }
 }
 
-export class CategoryModel implements TabBarItemInterface {
+export class CategoryModel {
   name: string;
   id: number;
   type: number;

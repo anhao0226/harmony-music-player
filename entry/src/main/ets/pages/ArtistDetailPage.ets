@@ -2,25 +2,18 @@ import router from '@ohos.router';
 
 import { SongModel, defaultSongItem, } from '../view_models/playlist_song_model';
 import { BottomBarControlComponent } from '../components/BottomBarControlComponent';
-import { SongDataSource } from '../view_models/SongDataSource';
 import { SongInfoDialogComponent } from '../components/SongInfoIDialogContent';
-import {
-  ArtistAlbumModel,
-  ArtistDetailModel,
-  ArtistMvModel,
-  fetchArtistMv,
-  fetchArtistData
-} from '../view_models/ArtistDetailModel';
-import { CustomTabBar, TabBarItemInterface } from '../components/CustomTabBar';
-import { CommonLayoutLComponent, CommonLayoutRComponent } from '../components/CommonPageLayoutComponent';
+import { ArtistAlbumModel, ArtistMvModel, } from '../view_models/ArtistDetailModel';
+import { CustomTabBar, TabBarDataInterface, TabViewBuildData } from '../components/CustomTabBar';
+import { CommonLayout, SongBaseInfoComponent } from '../components/CommonPageLayoutComponent';
 import { SongListComponent } from '../components/SongListComponent';
-import { CommonDataSource } from '../models/CommonDataSource';
 import { Song } from '../models/SongModel';
 import { fetchArtistDetail, fetchArtistSongs, fetchArtistAlbums, fetchArtistMvs } from '../api/SongApi';
 import { Artist, ArtistDetail } from '../models/ArtistDetailModel';
 import { HotAlbum } from '../models/ArtistAlbumModel';
-import { ImageComponent } from '../components/ImageComponent';
 import { Mv } from '../models/ArtistMvModel';
+import { DataSource } from '../models/DataSource';
+import { CustomImage } from '../components/ImageComponent';
 
 @Entry
 @Component
@@ -32,18 +25,19 @@ struct ArtistDetailPage {
   @State trackCount: number = 0;
   @State dialogData: SongModel | null = null;
   @State musicCount: number = 0;
-  //
-  @State _artist: Artist | null = null;
-  private _songs: CommonDataSource<Song> = new CommonDataSource<Song>();
-  private _dialogData: Song | null = null
+  @State artist: Artist = null;
+  @State tabViewArea: Area = null;
+  private songs: DataSource<Song> = new DataSource<Song>();
+  private _dialogData: Song | null = null;
+  @State artistId: number = 0;
   songInfoDialogController: CustomDialogController = new CustomDialogController({
     alignment: DialogAlignment.Center,
     builder: SongInfoDialogComponent({ data: this._dialogData })
   })
-  @State tabBarItems: TabBarItemInterface[] = [
-    { getText: () => 'Songs' },
-    { getText: () => 'Videos' },
-    { getText: () => 'Albums' }
+  @State tabBarItems: TabBarDataInterface[] = [
+    { text: 'Songs' },
+    { text: 'Videos' },
+    { text: 'Albums' }
   ];
 
   onPageShow() {
@@ -52,58 +46,65 @@ struct ArtistDetailPage {
     if (params && params.hasOwnProperty('artistId')) {
       artistId = params['artistId'];
     }
+    this.artistId = artistId;
     this.initData(artistId);
   }
 
   initData(artistId: number) {
-    fetchArtistDetail(artistId).then((res) => {
-      this._artist = res.artist;
-    });
-    fetchArtistSongs(artistId).then((res) => {
-      this._songs.pushDataFromArray(res.songs);
-    });
+    fetchArtistDetail(artistId).then((res) => this.artist = res.artist);
+    fetchArtistSongs(artistId).then((res) => this.songs.pushDataFromArray(res.songs));
   }
 
-  @Builder TabBarItem(item: TabBarItemInterface, index: number) {
-    if (index === 0) {
-      SongListComponent({ songCount: this.musicCount, songList: this._songs });
-    } else if (index === 1) {
-      _MvsComponent({ artistId: this._artist.id });
-    } else if (index === 2) {
-      _AlbumsComponent({ artistId: this._artist.id });
-    } else {
-      Text(`Error View`);
+  @Builder TabBarView(data: TabViewBuildData) {
+    if (data.index == 0) {
+      SongListComponent({
+        songCount: this.musicCount,
+        data: [{ data: this.songs }],
+      });
+    } else if (data.index == 1) {
+      AristVideosComponent({
+        artistId: this.artistId,
+      });
+    } else if (data.index === 2) {
+      AristAlbumsComponent({
+        artistId: this.artistId,
+      })
     }
   }
 
-  @Builder BodyBuilder() {
-    Column() {
-      CustomTabBar({
-        tabs: $tabBarItems,
-        items: $tabBarItems,
-        viewBuilder: this.TabBarItem.bind(this)
-      });
-    }.padding({ left: 16, right: 16 });
+  @Builder leftContent() {
+    SongBaseInfoComponent({
+      imgWidth: 300,
+      imageSrc: this.artist ? this.artist.cover : '',
+      description: this.artist ? this.artist.briefDesc : '',
+      text: this.artist ? this.artist.name : '',
+    }) {
+    };
+  }
+
+  @Builder rightContent() {
+    CustomTabBar({
+      tabs: $tabBarItems,
+      tabAlign: FlexAlign.Center,
+      viewBuilder: (data) => this.TabBarView(data),
+      onViewSize: (area: Area) => {
+        this.tabViewArea = area;
+      }
+    });
+  }
+
+  @Builder rightMenu() {
+
   }
 
   build() {
     Column() {
-      Row() {
-
-        CommonLayoutLComponent({
-          name: this._artist ? this._artist.name : '',
-          description: this._artist ? this._artist.briefDesc : '',
-          imgSrc: this._artist ? this._artist.cover : '',
-        });
-
-        CommonLayoutRComponent({
-          bodyBuilder: this.BodyBuilder.bind(this)
-        });
-
-      }.width('100%').layoutWeight(1);
-
+      CommonLayout({
+        leftContent: () => this.leftContent(),
+        rightContent: () => this.rightContent(),
+        rightMenu: () => this.rightMenu(),
+      });
       BottomBarControlComponent().key(this.TAG);
-
     }.height('100%').width('100%').backgroundColor('#F1F3F5');
   }
 
@@ -114,73 +115,87 @@ struct ArtistDetailPage {
 }
 
 @Component
-struct _AlbumsComponent {
-  private artistId: number;
-  @State _albums: HotAlbum[] = [];
+struct AristVideosComponent {
+  @Prop artistId: number;
+  @State movies: Mv[] = [];
 
   aboutToAppear() {
-    fetchArtistAlbums(this.artistId).then((res) => {
-      this._albums = res.hotAlbums;
-    })
+    fetchArtistMvs(this.artistId).then((result) => {
+      this.movies = result.mvs;
+    });
+  }
+
+  getImageScr(src: string) {
+    return `${src}?param=200y200`;
   }
 
   build() {
-    Column() {
-      List() {
-        ForEach(this._albums, (item: HotAlbum) => {
-          ListItem() {
-            Column({ space: 3 }) {
-              ImageComponent({ src: `${item.picUrl}?param=200y200`, autoResize: true })
-              Text(item.name).maxLines(2).textOverflow({ overflow: TextOverflow.Ellipsis })
-            }
-          }.padding(6).onClick(() => {
-            router.pushUrl({ url: 'pages/AlbumDetailPage', params: { albumId: item.id } });
-          })
-        }, (item: ArtistAlbumModel) => item.id.toString());
-      }
-      .lanes(4)
-      .align(Alignment.TopStart)
-      .height('100%')
-      .width('100%')
+    List({ space: 10 }) {
+      ForEach(this.movies, (item: Mv, index: number) => {
+        ListItem() {
+          Column() {
+            CustomImage({
+              imageSrc: this.getImageScr(item.imgurl16v9),
+              imageAspectRatio: 16 / 9,
+              imageWidth: 200,
+            });
+            Text(item.name).maxLines(2);
+          }
+        }.onClick(() => {
+
+        });
+      }, (item: Mv, _) => `CARD_ITEM_${item.id}`);
     }
+    .lanes(5)
+    .height(0)
+    .width('100%')
+    .layoutWeight(1)
+    .onAreaChange(() => {
+
+    })
   }
 }
+
 
 @Component
-struct _MvsComponent {
-  private artistId: number;
-  @State mvs: Mv[] = [];
+struct AristAlbumsComponent {
+  @Prop artistId: number;
+  @State albums: HotAlbum[] = [];
 
   aboutToAppear() {
-    fetchArtistMvs(this.artistId).then((res) => {
-      this.mvs = res.mvs;
-    })
+    fetchArtistAlbums(this.artistId).then((result) => {
+      this.albums = result.hotAlbums;
+    });
+  }
+
+  getImageScr(src: string) {
+    return `${src}?param=200y200`;
   }
 
   build() {
-    Column() {
-      List() {
-        ForEach(this.mvs, (item: Mv, index: number) => {
-          ListItem() {
-            Column({ space: 3 }) {
-              Image(item.imgurl16v9).aspectRatio(16 / 9).borderRadius(6).clip(true);
-              Text(item.name).maxLines(2).textOverflow({ overflow: TextOverflow.Ellipsis })
-            }
-          }.padding(6).onClick(() => {
-            router.pushUrl({ url: 'pages/MvPlayerPage', params: { mvId: item.id } })
-          }).width('100%').align(Alignment.Start);
-        }, (item: ArtistMvModel, _) => item.id.toString());
+    List({ space: 10 }) {
+      ForEach(this.albums, (item: HotAlbum, index: number) => {
+        ListItem() {
+          Column() {
+            CustomImage({
+              imageSrc: this.getImageScr(item.picUrl),
+              imageAspectRatio: 16 / 9,
+              imageWidth: 200,
+            });
+            Text(item.name).maxLines(2);
+          }
+        }.onClick(() => {
 
-      }
-      .lanes(4)
-      .height(0)
-      .width('100%')
-      .layoutWeight(1)
+        });
+      }, (item: HotAlbum, _) => `CARD_ITEM_${item.id}`);
     }
+    .lanes(5)
+    .height(0)
+    .width('100%')
+    .layoutWeight(1)
+    .onAreaChange(() => {
+
+    })
   }
 }
-
-
-
-
 

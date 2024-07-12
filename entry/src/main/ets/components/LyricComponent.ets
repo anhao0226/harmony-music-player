@@ -15,7 +15,7 @@ export struct LyricComponent {
   private _regExp = new RegExp(/\[(\d{2}):(\d{2})(\.(\d{2,3}))?]/);
   private _scroller: Scroller = new Scroller();
   @StorageProp('PROGRESS') @Watch('onProgressChange') progress: number = 0;
-  @StorageProp('AUDIO_ID') @Watch('onAudioChange') currAudioId: number = 0
+  @StorageProp('CURRENT_AUDIO_ID') @Watch('onAudioChange') currAudioId: number = 0
 
   _reset() {
     this._activeIndex = 0;

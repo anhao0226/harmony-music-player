@@ -1,9 +1,13 @@
-export class CommonDataSource<T> implements IDataSource {
+/**
+ * DataSource
+ */
+export class DataSource<T> implements IDataSource {
   private dataArray: T[] = [];
   private listeners: DataChangeListener[] = [];
+  private reverseData: boolean = false;
 
-  getData(index: number): T {
-    return this.dataArray[index];
+  constructor(reverseData?: boolean) {
+    this.reverseData = reverseData || false;
   }
 
   /**
@@ -22,25 +26,40 @@ export class CommonDataSource<T> implements IDataSource {
     return this.dataArray.slice(start);
   }
 
-  public pushData(data: T): void {
+  pushData(data: T): void {
     this.dataArray.push(data);
     this.notifyDataAdd(this.dataArray.length - 1);
   }
 
-  public pushDataFromArray(songs: T[]) {
+  init(values: T[]) {
+    this.dataArray = values;
+    this.notifyDataReload();
+  }
+
+  pushDataFromArray(songs: T[]) {
     songs.forEach((item: T) => {
       this.pushData(item);
     });
   }
 
-  public addData(index: number, data: T): void {
+  getData(index: number): T {
+    index = this.calcIndex(index);
+    return this.dataArray[index];
+  }
+
+  addData(index: number, data: T): void {
     this.dataArray.splice(index, 0, data);
     this.notifyDataAdd(index);
   }
 
-  public delData(index: number) {
+  delData(index: number): void {
+    index = this.calcIndex(index);
     this.dataArray.splice(index, 1);
     this.notifyDataDelete(index);
+  }
+
+  calcIndex(index: number): number {
+    return this.reverseData ? this.dataArray.length - 1 - index : index;
   }
 
   // 该方法为框架侧调用，为LazyForEach组件向其数据源处添加listener监听

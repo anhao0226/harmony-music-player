@@ -4,7 +4,7 @@ import notificationManager from '@ohos.notificationManager';
 import { AudioService } from '../common/utils/AudioService';
 import { SongInfoDialogComponent } from '../components/SongInfoIDialogContent';
 import { LyricComponent } from '../components/LyricComponent';
-import { AudioControlComponent, ControlEventType, ControlIcons } from '../components/AudioControlComponent';
+import { AudioControlComponent, ControlActionType, ControlIcons } from '../components/AudioControlComponent';
 import { fetchSongs } from '../api/SongApi';
 import router from '@ohos.router';
 import { AlbumComponent } from '../components/AlbumComponent';
@@ -13,7 +13,8 @@ import { FromRouterValue, PlaylistDialogComponent } from '../components/Playlist
 import { IconComponent } from '../components/IconComponent';
 import { CommentType } from '../api/CommentApi';
 import effectKit from '@ohos.effectKit';
-
+import { ListType } from '../common/utils/AudioShareData';
+import { AlbumImageComponent } from '../components/CommonPageLayoutComponent';
 
 const storage = new LocalStorage({
   'SONG_ID': 0,
@@ -33,7 +34,7 @@ struct SongPlayerPage {
   @State _artistsText: string = 'unknown';
   @State _mainColor: string = '#A6C2BE';
   @State _leftWidth: number = 0;
-  @StorageProp('AUDIO_ID') @Watch('onAudioChange') _audioId: number = 0;
+  @StorageProp('CURRENT_AUDIO_ID') @Watch('onAudioChange') _audioId: number = 0;
 
   /**
    * songInfoDialogController
@@ -56,11 +57,8 @@ struct SongPlayerPage {
     builder: PlaylistDialogComponent({
       bgColor: this._mainColor,
       fromRouterValue: this._fromRouterValue,
-      history: AudioService.getInstance().history(),
-      playlist: AudioService.getInstance().playlist(),
-      nextPlaylist: AudioService.getInstance().nextPlaylist(),
-      onSongItemClick: (value: Song, index: number, flag: Object) => {
-        AudioService.getInstance().start(index, flag);
+      onSongItemClick: (value: Song, index: number, listType: ListType) => {
+        AudioService.getInstance().start(index, listType);
       },
     }),
   });
@@ -112,11 +110,11 @@ struct SongPlayerPage {
           .fontColor(this.defaultColor);
 
         Text(this._artistsText)
-          .fontColor(this.defaultColor)
-          .onClick(() => {
-            this.songInfoDialogController.open();
-          })
-      }.alignSelf(ItemAlign.End).layoutWeight(1);
+          .fontColor(this.defaultColor);
+
+      }.alignSelf(ItemAlign.End).layoutWeight(1).onClick(() => {
+        this.songInfoDialogController.open();
+      });
 
       Row() {
         IconComponent({
@@ -124,12 +122,6 @@ struct SongPlayerPage {
           resource: $r('app.media.ic_public_message_3_line'),
           onTap: () => {
             router.pushUrl({ url: 'pages/Comments', params: { id: this._audioId, type: CommentType.MUSIC } });
-          }
-        });
-        IconComponent({
-          iconColor: '#99FFFFFF',
-          resource: $r('app.media.ic_public_album_fill'),
-          onTap: () => {
           }
         });
       }.padding({ right: 24 });
@@ -153,13 +145,14 @@ struct SongPlayerPage {
              * left
              */
             Column() {
-              AlbumComponent({
-                src: this._albumImageSrc,
-                getMainColor: (color: effectKit.Color) => {
+              AlbumImageComponent({
+                imgWidth: 300,
+                imageSrc: this._albumImageSrc,
+                imageMainColor: (color:effectKit.Color) => {
                   const hexColor = rgbaToHexColor(color);
                   this._mainColor = hexColor;
                 }
-              }).width('100%');
+              });
             }
             .width('50%')
             .height('100%')
@@ -182,7 +175,7 @@ struct SongPlayerPage {
           AudioControlComponent({
             icons: ControlIcons,
             onItemClick: (value) => {
-              if (value === ControlEventType.PLAY_LIST) {
+              if (value === ControlActionType.PLAY_LIST) {
                 this.playlistDialogController.open();
               }
             }

@@ -1,7 +1,10 @@
 import router from '@ohos.router';
+import { AudioService } from '../common/utils/AudioService';
+import { ListType } from '../common/utils/AudioShareData';
+import { DataSource } from '../models/DataSource';
 import { Song } from '../models/SongModel';
-import { ImageComponent } from './ImageComponent';
-import { ActionType, SongItemComponent } from './SongItemComponent';
+import { ActionType } from './SongItemComponent';
+import { SongListComponent } from './SongListComponent';
 
 export interface FromRouterValue {
   state: router.RouterState
@@ -10,9 +13,6 @@ export interface FromRouterValue {
 
 @CustomDialog
 export struct PlaylistDialogComponent {
-  private playlist: Song[] = [];
-  private nextPlaylist: Song[];
-  private history: Song[];
   private onSongItemClick: (song: Song, index: number, flag?: Object) => void;
   private controller?: CustomDialogController
   private fromRouterValue: FromRouterValue = null;
@@ -22,9 +22,9 @@ export struct PlaylistDialogComponent {
 
   aboutToAppear() {
     //
-    if (this.nextPlaylist) {
-      this._renderNextQueue = [...this.nextPlaylist].reverse();
-    }
+    // if (this.nextPlaylist) {
+    //   this._renderNextQueue = [...this.nextPlaylist].reverse();
+    // }
     //
     if (this.fromRouterValue) {
       const { name } = this.fromRouterValue.state;
@@ -45,87 +45,87 @@ export struct PlaylistDialogComponent {
 
   @Builder itemHead(text: string) {
     Row() {
-      Text(`${text}(${this.playlist.length} songs)`)
-        .fontSize(22).fontWeight(FontWeight.Medium);
+      // Text(`${text}(${this.playlist.length} songs)`)
+      //   .fontSize(22).fontWeight(FontWeight.Medium);
       Blank();
       Text('Clear')
         .fontSize(22).fontWeight(FontWeight.Medium)
     }.height(72).width('100%').backgroundColor('#FFFFFF').padding({ left: 12, right: 12 });
   }
 
-  @Builder SongItemIconBuilder(data: Song) {
-    ImageComponent({
-      src: `${data.al.picUrl}`,
-      componentWidth: 32,
-    })
+  @Builder ListGroupHeaderUI(text: string) {
+    Column() {
+      Row() {
+        Text(text)
+          .fontWeight(FontWeight.Bold)
+          .margin({ left: 10 })
+          .fontSize(20)
+          .fontColor('#66000000');
+        Blank()
+        Text('Clear')
+          .fontWeight(FontWeight.Bold)
+          .margin({ right: 10 })
+          .fontSize(20)
+          .fontColor('#66000000');
+      }.width('100%').alignItems(VerticalAlign.Center).height(62);
+      Divider().color('#08000000');
+    }.backgroundColor(Color.White);
   }
 
   build() {
     Column() {
 
+      Row()
+        .height(5)
+        .width('30%')
+        .backgroundColor('#19000000')
+        .borderRadius(3)
+        .margin({ top: 16 });
+
+      /**
+       * next
+       */
       Swiper() {
         Column() {
-          List() {
-            if (this._renderNextQueue && this._renderNextQueue.length) {
-              ListItemGroup({ header: this.itemHead('Queue') }) {
-                ForEach(this._renderNextQueue, (item: Song, index: number) => {
-                  ListItem() {
-                    SongItemComponent({
-                      data: item,
-                      actions: [ActionType.Close],
-                      rowSpace: 10,
-                      onItemTap: (data: Song) => {
-                        this.handleSongItemClick(data, index, { type: 'next' });
-                      },
-                    });
-                  }
-                }, (item: Song, index) => `${item.id}_DIALOG_ITEM`);
-              }.divider({ strokeWidth: 1 }).padding({ left: 16, right: 16 });
-            }
-
-            /**
-             *
-             */
-            ListItemGroup({ header: this.itemHead('Play in order') }) {
-              ForEach(this.playlist, (item: Song, index: number) => {
-                ListItem() {
-                  SongItemComponent({
-                    data: item,
-                    actions: [ActionType.Close],
-                    rowSpace: 10,
-                    onItemTap: (data: Song) => {
-                      this.handleSongItemClick(data, index, { type: 'list' });
-                    },
-                  });
-                }
-              }, (item: Song, index) => `${item.id}_DIALOG_ITEM`);
-            }.divider({ strokeWidth: 1 }).padding({ left: 16, right: 16 });
-          }.height('100%').width('100%').layoutWeight(1).sticky(StickyStyle.Header);
-        }.height('100%').width('100%').layoutWeight(1);
-
+          SongListComponent({
+            songCount: 0,
+            lanes: 1,
+            actions: [ActionType.Close],
+            navigation: false,
+            data: [
+              {
+                data: AudioService.getInstance().listData(ListType.Next),
+                header: () => this.ListGroupHeaderUI('Queue'),
+                type: ListType.Next,
+              },
+              {
+                data: AudioService.getInstance().listData(ListType.Play),
+                header: () => this.ListGroupHeaderUI('Continue Playing'),
+              }
+            ]
+          }).padding({ left: 12, right: 12 });
+        }.height(100).width('100%').backgroundColor(Color.White);
         /**
-         *
+         * history
          */
         Column() {
-          this.itemHead('History');
-          List() {
-            ForEach(this.history, (item: Song, index: number) => {
-              ListItem() {
-                SongItemComponent({
-                  data: item,
-                  actions: [ActionType.Close],
-                  onItemTap: (data: Song) => {
-                    this.handleSongItemClick(data, index, { type: 'history' });
-                  },
-                });
+          SongListComponent({
+            lanes: 1,
+            songCount: 0,
+            navigation: false,
+            data: [
+              {
+                data: AudioService.getInstance().listData(ListType.History),
+                header: () => this.ListGroupHeaderUI('History'),
+                type: ListType.History,
               }
-            }, (item: Song, index) => `${item.id}_DIALOG_ITEM`);
-          }.height('100%').width('100%').layoutWeight(1);
-        }.height('90%')
+            ],
+          }).padding({ left: 12, right: 12 });
+        }.height(100).width('100%').backgroundColor(Color.White);
       }
+      .index(0)
       .height('100%')
       .autoPlay(false)
-      .index(0)
       .loop(false)
       .layoutWeight(1)
     }

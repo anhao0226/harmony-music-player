@@ -9,7 +9,6 @@
     "pages/CanvasExample",
     "pages/CustomTabBar",
     "pages/Comments",
-    "pages/SearchPage",
     "pages/MvPlayerPage"
   ]
 }

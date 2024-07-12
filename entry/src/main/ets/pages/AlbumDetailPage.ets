@@ -4,13 +4,12 @@ import { SongModel, defaultSongItem, } from '../view_models/playlist_song_model'
 import { BottomBarControlComponent } from '../components/BottomBarControlComponent';
 import { SongInfoDialogComponent } from '../components/SongInfoIDialogContent';
 import { ArtistAlbumModel, } from '../view_models/ArtistDetailModel';
-import { CommonLayoutLComponent, CommonLayoutRComponent } from '../components/CommonPageLayoutComponent';
+import { CommonLayout, SongBaseInfoComponent } from '../components/CommonPageLayoutComponent';
 import { SongListComponent } from '../components/SongListComponent';
-import { SongDataSource } from '../view_models/SongDataSource';
-import { CommonDataSource } from '../models/CommonDataSource';
 import { Song } from '../models/SongModel';
 import { fetchAlbumDetail } from '../api/SongApi';
 import { Album } from '../models/AlbumDetailModel';
+import { DataSource } from '../models/DataSource';
 
 
 @Entry
@@ -24,7 +23,7 @@ struct AlbumDetailPage {
   @State dialogData: SongModel | null = null;
   @State album: ArtistAlbumModel | null = null;
   @State _album: Album = null;
-  private _songs: CommonDataSource<Song> = new CommonDataSource<Song>();
+  private _songs: DataSource<Song> = new DataSource<Song>();
   private _dialogData: Song | null = null;
   private songInfoDialogController: CustomDialogController = new CustomDialogController({
     alignment: DialogAlignment.Center,
@@ -44,36 +43,35 @@ struct AlbumDetailPage {
     })
   }
 
-  @Builder BodyBuilder() {
-    Column() {
-      SongListComponent({
-        songList: this._songs,
-        songCount: this.album ? this.album.size : 0,
-      });
-    }
-    .padding({ left: 12, right: 12 })
-    .backgroundColor('#FFFFFF')
-    .borderRadius({ topLeft: 14, topRight: 14 })
-    .layoutWeight(1);
+  @Builder leftContent() {
+    SongBaseInfoComponent({
+      text: this._album ? this._album.name : '',
+      imageSrc: this._album ? this._album.picUrl : '',
+      description: this._album ? this._album.description : '',
+      imgWidth: 300,
+    }) {
+    };
+  }
+
+  @Builder rightMenu() {
+
+  }
+
+  @Builder rightContent() {
+    SongListComponent({
+      songCount: this.album ? this.album.size : 0,
+      data: [{ data: this._songs }],
+    });
   }
 
   build() {
     Column() {
-      Row() {
-        CommonLayoutLComponent({
-          imgSrc: this._album ? this._album.picUrl : '',
-          name: this._album ? this._album.name : '',
-          description: this._album ? this._album.description : ''
-        });
-
-        CommonLayoutRComponent({
-          bodyBuilder: this.BodyBuilder.bind(this),
-        });
-      }.width('100%').layoutWeight(1);
-
-      //
+      CommonLayout({
+        leftContent: () => this.leftContent(),
+        rightMenu: () => this.rightMenu(),
+        rightContent: () => this.rightContent(),
+      }).layoutWeight(1);
       BottomBarControlComponent().key(this.TAG);
-
     }.height('100%').width('100%').backgroundColor('#F1F3F5');
   }
 
